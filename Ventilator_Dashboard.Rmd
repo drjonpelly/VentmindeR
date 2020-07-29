@@ -1,0 +1,646 @@
+---
+title: "VentmindeR"
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    theme: cerulean
+bibliography: Ventilator_Dashboard_Library.bib
+---
+
+```{r global, include=FALSE}
+# load data in 'global' chunk so it can be shared by all users of the dashboard
+library(tidyverse)
+library(shiny)
+library(ggrepel)
+library(citr)
+```
+
+<style>
+  .white-box {
+    background-color: white;
+  }
+</style>
+
+# Introduction {.white-box}
+
+Welcome to **VentmindeR** a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
+
+**About Each Calculator:**
+
+*Rate Change* is for use in adjusting ventilator rate based on a current and desired blood gas value. It assumes an inverse linear relationship between rate and pCO2, which is **only** true if you are not simultaneously adjusting tidal volume. This calculator assumes a patient is not breathing above their set rate.
+
+*Rate/Volume Change * is for use in adjusting ventilator rate and tidal volume based on a current and desired blood gas value. It assumes an inverse linear relationship between minute ventilation and pCO2, which, by definition, assumes that the patient's dead space fraction is constant. **Please note** that changes in dead space fraction after volume adjustments may occur. This calculator assumes a patient is not breathing above their set rate.
+
+*Compliance & Resistance* is for use to calculate a patient's compliance, resistance, and (inspiratory) time constant. It is designed to be used in **square-flow, volume control mode**. This calculator assumes a passive patient (it does not account for $P_{mus}$, or effort exerted by the patient).
+
+*Time Constant* is for use in obtaining an instantaneous time constant from a patient's flow and volume scalars in any mode during passive exhalation. It is recommended that you obtain values from several different points on the exhalation curve, or across multiple breaths, to increase accuracy. Again, this calculator assumes that exhalation is **passive** (exponential decay) and cannot account for an actively exhaling patient.
+
+*P/F & OI* is for use in determining a patient's measures of oxygenation obtained from an arterial blood gas (P/F ratio and oxygenation index), or pulse oximetry (S/F ratio and oxygenation saturation index). If a value for PEEP is provided, it will also plot the patient's FiO2 (%) and PEEP in comparison to the ARDSnet recommendations.
+
+**Disclaimer:**
+
+These calculators are **not** a substitute for medical advice, and are provided freely with *absolutely no warranty*. Use of these tools should be considered **at your own risk**.
+
+# Rate Change
+
+## Input {.sidebar}
+
+```{r rate_inputs}
+
+numericInput(
+  inputId = "current_pco2",
+  label = "Current pCO2:",
+  value = 40,
+  min = 0,
+  max = 100,
+  step = 1
+)
+numericInput(
+  inputId = "current_rate",
+  label = "Current Ventilator Rate:",
+  value = 20,
+  min = 0,
+  max = 40,
+  step = 1
+)
+numericInput(
+  inputId = "desired_pco2",
+  label = "Desired pCO2:",
+  value = 40,
+  min = 0,
+  max = 100,
+  step = 1
+)
+```
+
+## Numeric Output 
+
+### Result {.white-box}
+
+```{r show_rate_answer}
+# Perform rate calculation
+renderText({
+  ifelse(input$current_pco2 * input$current_rate / input$desired_pco2 >= 28,
+    paste("Your desired rate is: ", round(input$current_pco2 * input$current_rate / input$desired_pco2, 0), ". WARNING: at this rate, a time constant calculation is recommended to prevent air trapping.", sep = ""),
+    paste("Your desired rate is: ", round(input$current_pco2 * input$current_rate / input$desired_pco2, 0), ".", sep = "")
+  )
+})
+```
+
+### Rationale and Equation {.white-box}
+
+The new ventilator rate is calculated based on the following equation:
+
+$Rate_{Current}*pCO2_{Current} =Rate_{Desired}*pCO2_{Desired}$
+
+Therefore:
+
+$Rate_{Desired} = \frac{Rate_{Current}*pCO2_{Current}}{ pCO2_{Desired}}$
+
+Please note that this relationship assumes that a patient's dead space fraction or $\frac{V_{d}}{V_{t}}$ is constant.
+
+### Graph of pCO2 and Rate {.white-box}
+
+```{r rate_output graphical}
+renderPlot({
+  current_pco2 <- input$current_pco2
+  current_rate <- input$current_rate
+  desired_pco2 <- input$desired_pco2
+  desired_rate <- current_pco2 * current_rate / desired_pco2
+
+  colors <- c(
+    "current" = "red",
+    "desired" = "blue"
+  )
+  tribble(
+    ~rate, ~co2, ~color_mapping, ~point_name,
+    current_rate, current_pco2, "red", "current",
+    desired_rate, desired_pco2, "blue", "desired"
+  ) %>%
+    ggplot(aes(x = rate, y = co2)) +
+    geom_line() +
+    geom_point(aes(color = point_name)) +
+    scale_color_manual(values = colors) +
+    geom_label_repel(aes(label = point_name)) +
+    theme_bw() +
+    labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.") +
+    xlab("Ventilator Rate") +
+    ylab("pCO2") +
+    theme(legend.position = "none", plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+})
+
+rm(colors, current_pco2, current_rate, desired_pco2, desired_rate)
+```
+
+# Rate/Volume Change
+
+## Inputs {.sidebar}
+
+```{r rate_volume_inputs}
+
+numericInput(
+  inputId = "rv_current_pco2",
+  label = "Current pCO2:",
+  value = 40,
+  min = 0,
+  max = 100,
+  step = 1
+)
+numericInput(
+  inputId = "rv_current_rate",
+  label = "Current Ventilator Rate:",
+  value = 20,
+  min = 0,
+  max = 40,
+  step = 1
+)
+numericInput(
+  inputId = "rv_current_tv",
+  label = "Current Tidal Volume (ml/kg):",
+  value = 6,
+  min = 0,
+  max = 20,
+  step = 1
+)
+numericInput(
+  inputId = "rv_desired_pco2",
+  label = "Desired pCO2:",
+  value = 40,
+  min = 0,
+  max = 100,
+  step = 1
+)
+
+selectInput(
+  inputId = "rv_desired_set",
+  label = "Set Tidal Volume or Rate?",
+  choices = list("Set Tidal Volume", "Set Rate")
+)
+
+renderText({
+  case_when(
+    input$rv_desired_set == "Set Tidal Volume" ~ paste("Desired Tidal Volume (ml/kg):"),
+    input$rv_desired_set == "Set Rate" ~ paste("Desired Rate:"),
+  )
+})
+
+numericInput(
+  inputId = "rv_desired_numeric",
+  label = "",
+  value = 8,
+  min = 0,
+  max = 100,
+  step = 1
+)
+```
+
+## Numeric Output 
+
+### Result {.white-box}
+
+```{r show_rv_answer}
+
+renderText({
+  if (input$rv_desired_set == "Set Tidal Volume") {
+    desired_rate_rv <- input$rv_current_pco2 * input$rv_current_rate * input$rv_current_tv / input$rv_desired_pco2 / input$rv_desired_numeric
+
+    out <- ifelse(desired_rate_rv >= 28,
+      paste("Your desired rate is: ", round(desired_rate_rv, 0), ". WARNING: at this rate, a time constant calculation is recommended to prevent air trapping.", sep = ""),
+      paste("Your desired rate is: ", round(desired_rate_rv, 0), ".", sep = "")
+    )
+  }
+
+  if (input$rv_desired_set == "Set Rate") {
+    desired_vt_rv <- input$rv_current_pco2 * input$rv_current_rate * input$rv_current_tv / input$rv_desired_pco2 / input$rv_desired_numeric
+
+    out <- case_when(
+      desired_vt_rv >= 10 ~ paste("Your desired tidal volume is: ", round(desired_vt_rv, 1), " ml/kg. WARNING: this tidal volume may be associated with volutrauma. Ensure there are no signs of overdistention on pressure-volume loops.", sep = ""),
+      desired_vt_rv >= 4 & desired_vt_rv < 10 ~ paste("Your desired tidal volume is: ", round(desired_vt_rv, 1), " ml/kg.", sep = ""),
+      desired_vt_rv < 4 ~ paste("Your desired tidal volume is: ", round(desired_vt_rv, 1), " ml/kg. WARNING: this tidal volume is low, and may be associated with progressive atelectasis. Please ensure this is not an error.", sep = "")
+    )
+  }
+  return(out)
+})
+```
+
+### Rationale and Equation {.white-box}
+
+The new ventilator parameters are calculated based on the following equation:
+
+$Minute Ventilation_{Current}*pCO2_{Current}*\frac{V_d}{V_t}_{Current} =Minute Ventilation_{Desired}*pCO2_{Desired}*\frac{V_d}{V_t}_{AfterChange}$
+
+Therefore, assuming $\frac{V_{d}}{V_{t}}$ does not change after your adjustment:
+
+$Rate_{Current}*TidalVolume_{Current}*pCO2_{Current} = Rate_{Desired}*TidalVolume_{Desired}*pCO2_{Desired}$
+
+**Please note** that this relationship assumes that a patient's dead space fraction or $\frac{V_{d}}{V_{t}}$ is constant. **This may not be true**, particularly after volume adjustments.
+
+### Graph of pCO2 and Minute Ventilation {.white-box}
+
+```{r show_rv_plot}
+renderPlot({
+  current_mv <- input$rv_current_rate * input$rv_current_tv
+  desired_mv <- input$rv_current_rate * input$rv_current_tv * input$rv_current_pco2 / input$rv_desired_pco2
+
+  colors <- c(
+    "current" = "red",
+    "desired" = "blue"
+  )
+
+  tribble(
+    ~minute_ventilation, ~pco2, ~point_name,
+    current_mv, input$rv_current_pco2, "current",
+    desired_mv, input$rv_desired_pco2, "desired"
+  ) %>%
+    ggplot(aes(x = minute_ventilation, y = pco2)) +
+    geom_line() +
+    geom_point(aes(color = point_name)) +
+    scale_color_manual(values = colors) +
+    geom_label_repel(aes(label = point_name)) +
+    theme_bw() +
+    labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.") +
+    xlab("Minute Ventilation (ml/kg/min)") +
+    ylab("pCO2") +
+    theme(legend.position = "none", plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+})
+```
+
+# Compliance & Resistance
+
+## Inputs {.sidebar}
+
+```{r cr_inputs}
+numericInput(
+  inputId = "cr_vt",
+  label = "Current Tidal Volume (ml):",
+  value = 100,
+  min = 0,
+  max = 1000,
+  step = 1
+)
+numericInput(
+  inputId = "cr_pip",
+  label = "Current PIP (cmH20):",
+  value = 15,
+  min = 0,
+  max = 100,
+  step = 1
+)
+numericInput(
+  inputId = "cr_pplat",
+  label = "Current Plateau Pressure (cmH20):",
+  value = 10,
+  min = 0,
+  max = 100,
+  step = 1
+)
+numericInput(
+  inputId = "cr_peep",
+  label = "Current PEEP (cmH20):",
+  value = 5,
+  min = 0,
+  max = 100,
+  step = 1
+)
+numericInput(
+  inputId = "cr_itime",
+  label = "Current Inspiratory Time (seconds):",
+  value = 0.5,
+  min = 0,
+  max = 10,
+  step = 0.01
+)
+numericInput(
+  inputId = "cr_height",
+  label = "Patient Height (cm):",
+  value = 100,
+  min = 0,
+  max = 1000,
+  step = 1
+)
+```
+
+## Numeric Results
+
+### Compliance and Resistance {.white-box}
+
+```{r compliance_and_resistance_numeric}
+renderText({
+  compliance <- input$cr_vt / 1000 / (input$cr_pplat - input$cr_peep)
+  resistance <- (input$cr_pip - input$cr_pplat) / (input$cr_vt / 1000 / input$cr_itime)
+  paste("The patient's compliance is: ", round(compliance, 3), " l/cmH2O (", round(compliance * 1000, 1), " ml/cmH2O). The patient's resistance is: ", round(resistance, 1), " cmH2O*seconds/l.", sep = "")
+})
+```
+
+### Time Constant and Respiratory Rate {.white-box}
+
+```{r inspiratory_time_constant_and_rate}
+renderText({
+  compliance <- input$cr_vt / 1000 / (input$cr_pplat - input$cr_peep)
+  resistance <- (input$cr_pip - input$cr_pplat) / (input$cr_vt / 1000 / input$cr_itime)
+  time_constant <- compliance * resistance
+  paste("The patient's (inspiratory) time constant is: ", round(time_constant, 2), " seconds. Assuming the inspiratory and expiratory time constants are matched, the patient must have an exhalation time of ", round(time_constant * 3, 2), " seconds. Given that you have specified an inspiratory time of ", input$cr_itime, " seconds, the maximum safe respiratory rate for this patient is ", round(60 / (time_constant * 3 + input$cr_itime), 1), " breaths per minute to prevent air trapping.", sep = "")
+})
+```
+
+### Rationale and Equations {.white-box}
+
+$Compliance=\frac{\Delta Volume}{\Delta Pressure}=\frac{Tidal Volume}{P_{plat} - PEEP}$
+
+$Resistance=\frac{\Delta Pressure}{Flow}=\frac{PIP-P_{plat}}{Flow}=\frac{PIP-P_{plat}}{\frac{V_{t}}{iTime}}$
+
+$TimeConstant=\tau=Compliance*Resistance$
+
+$Maximum Safe Respiratory Rate=\frac{60}{3\tau+iTime}$
+
+## Graphical Output
+
+### Compliance
+
+```{r compliance curve}
+renderPlot({
+  pt_compliance <- input$cr_vt / (input$cr_pplat - input$cr_peep)
+  pt_height <- input$cr_height / 100
+
+  tibble(height_m = seq(0.6, 1.8, 0.05)) %>%
+    mutate(boys = exp(1.592 * log(height_m) + 2.927)) %>%
+    mutate(girls = exp(2.039 * log(height_m) + 2.858)) %>%
+    pivot_longer(cols = c(girls, boys)) %>%
+    ggplot(aes(x = height_m, y = value, lty = factor(name))) +
+    geom_line() +
+    geom_point(aes(pt_height, pt_compliance), color = "blue") +
+    geom_label(aes(x = pt_height, y = pt_compliance), label = "patient", color = "blue", nudge_x = -0.1, nudge_y = 2) +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.title = element_blank()) +
+    labs(title = "Patient Compliance Vs. Normal Compliance Curves", subtitle = "The Normal Compliance Curves are Shown in Black") +
+    xlab("Height (meters)") +
+    ylab("Static Compliance (ml/cmH2O)")
+})
+```
+
+### Resistance
+
+```{r}
+renderPlot({
+  pt_resistance <- (input$cr_pip - input$cr_pplat) / (input$cr_vt / 1000 / input$cr_itime)
+  pt_height <- input$cr_height / 100
+
+  tibble(height_m = seq(0.6, 1.8, 0.05)) %>%
+    mutate(boys = exp(-1.560 * log(height_m) + 3.504)) %>%
+    mutate(girls = exp(-1.834 * log(height_m) + 3.607)) %>%
+    pivot_longer(cols = c(girls, boys)) %>%
+    ggplot(aes(x = height_m, y = value, lty = factor(name))) +
+    geom_line() +
+    geom_point(aes(pt_height, pt_resistance), color = "red") +
+    geom_label(aes(x = pt_height, y = pt_resistance), label = "patient", color = "red", nudge_x = -0.1, nudge_y = 3) +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.title = element_blank()) +
+    labs(title = "Patient Resistance Vs. Normal Resistance Curves", subtitle = "The Normal Respiratory System Resistance Curves are Shown in Black") +
+    xlab("Height (meters)") +
+    ylab("System Resistance (cmH2O*seconds/ml)")
+})
+```
+
+# Time Constant
+
+## Inputs {.sidebar}
+
+```{r tc_inputs}
+numericInput(
+  inputId = "tc_v",
+  label = "Current Tidal Volume (ml):",
+  value = 100,
+  min = 0,
+  max = 1000,
+  step = 1
+)
+numericInput(
+  inputId = "tc_flow",
+  label = "Current Flow (l/min):",
+  value = 10,
+  min = 0,
+  max = 1000,
+  step = 1
+)
+numericInput(
+  inputId = "tc_itime",
+  label = "Current Inspiratory Time (seconds):",
+  value = 0.5,
+  min = 0,
+  max = 10,
+  step = 0.01
+)
+```
+
+## Numeric Result
+
+### Time Constant and Respiratory Rate {.white-box}
+
+```{r show_tc_result}
+renderText({
+  time_constant <- input$tc_v / 1000 / input$tc_flow * 60
+
+  paste("The patient's time constant is: ", round(time_constant, 2), " seconds. The patient must have an exhalation time of ", round(time_constant * 3, 2), " seconds. Given that you have specified an inspiratory time of ", input$cr_itime, " seconds, the maximum safe respiratory rate for this patient is ", round(60 / (time_constant * 3 + input$tc_itime), 1), " breaths per minute to prevent air trapping.", sep = "")
+})
+```
+
+### Rationale and Equation {.white-box}
+
+$P_{aw}-P_{mus}=Resistance*Flow+\frac{Volume}{Compliance}+PEEP$
+
+During passive exhalation with unlimited expiratory time, airway pressure falls to zero:
+
+$0=Resistance*Flow+\frac{Volume}{Compliance}$
+
+$\frac{-Volume}{Compliance}=Resistance*Flow$
+
+$\frac{-Volume}{Flow}=Resistance*Compliance=TimeConstant(\tau)$
+
+### Graph of Exhalation over Time {.white-box}
+
+```{r exhale_graph}
+renderPlot({
+  tc <- input$tc_v / 1000 / input$tc_flow * 60
+
+  tibble(time = seq(0, 10, 0.05)) %>%
+    mutate(remaining = exp(-time / tc)) %>%
+    ggplot(aes(time, remaining * 100)) +
+    geom_line() +
+    geom_vline(aes(xintercept = tc * 3), lty = 2, color = "red") +
+    geom_vline(aes(xintercept = tc), lty = 2, color = "blue") +
+    geom_label(aes(tc * 3 + 1, 25), label = paste(round(tc * 3, 1), "seconds\n3 Time Constants\n95% Vt Exhaled"), color = "red") +
+    geom_label(aes(tc + 1, 75), label = paste(round(tc, 1), "seconds\n1 Time Constant\n37% Vt Exhaled"), color = "blue") +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    labs(title = "Percent of Tidal Volume Exhaled over Time") +
+    ylab("% of Tidal Volume Remaining") +
+    scale_x_continuous(breaks = seq(0, 10, 2), name = "Exhale Time (seconds)")
+})
+```
+
+# Vd/Vt
+
+## Inputs {.sidebar}
+
+```{r}
+numericInput(
+  inputId = "vdvt_paco2",
+  label = "PaCO2 (mmHg):",
+  value = 40,
+  min = 0,
+  max = 100,
+  step = 1
+)
+numericInput(
+  inputId = "vdvt_peco2",
+  label = "End-Tidal CO2 (mmHg)",
+  value = 35,
+  min = 0,
+  max = 100,
+  step = 1
+)
+```
+
+## Outputs
+
+### Result {.white-box}
+
+```{r vd_vt_text}
+renderText({
+  vd_vt <- (input$vdvt_paco2 - input$vdvt_peco2) / input$vdvt_paco2
+  paste("The patient's Vd/Vt is: ", round(vd_vt, 2), ". Normal Vd/Vt in children was originally found to be approximately 0.33 ± 0.05 in the original 1976 Kerr study, but has been suggested to be lower in more recent studies.", sep = "")
+})
+```
+
+### Rationale and Equation {.white-box}
+
+$\frac{V_{d}}{V_{t}}=\frac{P_{a}CO_{2}-P_{ET}CO_{2}}{P_{a}CO_{2}}$
+
+# P/F & OI
+
+## Inputs {.sidebar}
+
+```{r pf_oi_inputs}
+numericInput(
+  inputId = "oi_fio2",
+  label = "Current FiO2 (%):",
+  value = 30,
+  min = 0,
+  max = 100,
+  step = 1
+)
+
+numericInput(
+  inputId = "oi_map",
+  label = "Current Mean Airway Pressure (cmH2O):",
+  value = 8,
+  min = 0,
+  max = 100,
+  step = 1
+)
+numericInput(
+  inputId = "oi_peep",
+  label = "Current PEEP (cmH2O):",
+  value = 5,
+  min = 0,
+  max = 100,
+  step = 1
+)
+
+selectInput(
+  inputId = "oi_desired",
+  label = "P/F and OI or S/F and OSI?",
+  choices = list("P/F and OI", "S/F and OSI")
+)
+
+renderText({
+  case_when(
+    input$oi_desired == "P/F and OI" ~ paste("Current PaO2 (mmHg):"),
+    input$oi_desired == "S/F and OSI" ~ paste("Current SpO2 (%):"),
+  )
+})
+numericInput(
+  inputId = "oi_pao2",
+  label = "",
+  value = 100,
+  min = 0,
+  max = 1000,
+  step = 1
+)
+```
+
+## Outputs
+
+### Numeric Result {.white-box}
+
+```{r oi_numeric_result}
+renderText({
+  if (input$oi_desired == "P/F and OI") {
+    pf_ratio <- input$oi_pao2 / input$oi_fio2 * 100
+    oi_index <- input$oi_fio2 * input$oi_map / input$oi_pao2
+    numeric_calculation <- paste("The patient's P/F ratio is: ", round(pf_ratio, 1), ", and the patient's oxygenation index (OI) is: ", round(oi_index, 1), ". PALICC defines pediatric ARDS as a P/F ratio <300 (mild), 100-199 (moderate), and <100 (severe) or an oxygnation index of ≥4 (mild), ≥8 (moderate), ≥16 (severe). The use of the oxygenation index is preferred.", sep = "")
+  }
+
+  if (input$oi_desired == "S/F and OSI" & input$oi_pao2 >= 100) {
+    numeric_calculation <- paste("You have selected an oxygen saturation of ≥100%. Thus, it is not possible to calculate an S/F ratio or OSI. Did you mean to enter a Pao2?")
+  }
+
+  if (input$oi_desired == "S/F and OSI" & input$oi_pao2 < 100) {
+    pf_ratio <- input$oi_pao2 / input$oi_fio2 * 100
+    oi_index <- input$oi_fio2 * input$oi_map / input$oi_pao2
+    numeric_calculation <- paste("The patient's S/F ratio is: ", round(pf_ratio, 1), ", and the patient's oxygenation saturation index (OSI) is: ", round(oi_index, 1), ". PALICC defines pediatric ARDS as an S/F ratio <264 or an oxygnation saturation index of ≥5 (mild), ≥7.5 (moderate), ≥12.3 (severe). The use of the oxygenation saturation index is preferred.", sep = "")
+  }
+
+  return(numeric_calculation)
+})
+```
+
+### Rationale and Equations {.white-box}
+
+$\frac{P}{F}Ratio=\frac{P_{a}O2}{F_{i}O2}$
+
+$OI=\frac{F_{i}O2*MAP*100}{P_{a}O2}$
+
+$\frac{S}{F}Ratio=\frac{S_{p}O2}{F_{i}O2}$
+
+$OSI=\frac{F_{i}O2*MAP*100}{S_{p}O2}$
+
+Please note that an S/F ratio and OSI should **only** be calculated when $S_{p}O2<100$%.
+
+### ARDSnet PEEP Recommendations
+
+```{r ardsnet_peep_graph}
+renderPlot({
+  patient_fio2 <- input$oi_fio2
+  patient_peep <- input$oi_peep
+
+  tribble(
+    ~fio2, ~lower_peep_1, ~lower_peep_2, ~upper_peep_1, ~upper_peep_2,
+    30, 5, 5, 5, 14,
+    40, 5, 8, 14, 16,
+    50, 8, 10, 16, 20,
+    60, 10, 10, 20, 20,
+    70, 10, 14, 20, 20,
+    80, 14, 14, 20, 22,
+    90, 14, 18, 22, 22,
+    100, 18, 24, 22, 24,
+  ) %>%
+    ggplot(aes(fio2)) +
+    geom_ribbon(aes(ymin = lower_peep_1, ymax = lower_peep_2), color = "blue", fill = "blue", alpha = 0.1) +
+    geom_ribbon(aes(ymin = upper_peep_1, ymax = upper_peep_2), color = "red", fill = "red", alpha = 0.1) +
+    geom_point(aes(x = patient_fio2, y = patient_peep)) +
+    geom_label(aes(x = patient_fio2, y = patient_peep), label = "patient", nudge_y = 1.5) +
+    theme_bw() +
+    labs(title = "Patient PEEP and FiO2 Compared to ARDSnet Recommendations", subtitle = "Lower and higher PEEP strategies are in blue and red, respectively.") +
+    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+    xlab("Fio2 (%)") +
+    ylab("PEEP (cmH2O)")
+})
+```
+
+
+# References {.white-box}
+
+@RN5, @RN8, @RN6, @RN30, @RN11, @RN12, @RN4, @RN14, @RN15, @RN29, @RN19, @RN18, @RN17, @RN16, @RN20, @RN1, @RN21, @RN22, @RN23, @RN3, @RN24, @RN25, @RN26, @RN27, @RN28, and @RN2
