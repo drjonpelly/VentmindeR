@@ -25,7 +25,7 @@ library(citr)
 
 # Introduction {.white-box}
 
-Welcome to **VentmindeR** (version 1.0, updated 29 July, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
+Welcome to **VentmindeR** (version 1.1, updated 29 July, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
 
 **About Each Calculator:**
 
@@ -183,16 +183,9 @@ selectInput(
   choices = list("Set Tidal Volume", "Set Rate")
 )
 
-renderText({
-  case_when(
-    input$rv_desired_set == "Set Tidal Volume" ~ paste("Desired Tidal Volume (ml/kg):"),
-    input$rv_desired_set == "Set Rate" ~ paste("Desired Rate:"),
-  )
-})
-
 numericInput(
   inputId = "rv_desired_numeric",
-  label = "",
+  label = "Desired Tidal Volume (ml/kg) or Rate:",
   value = 8,
   min = 0,
   max = 100,
@@ -559,15 +552,9 @@ selectInput(
   choices = list("P/F and OI", "S/F and OSI")
 )
 
-renderText({
-  case_when(
-    input$oi_desired == "P/F and OI" ~ paste("Current PaO2 (mmHg):"),
-    input$oi_desired == "S/F and OSI" ~ paste("Current SpO2 (%):"),
-  )
-})
 numericInput(
   inputId = "oi_pao2",
-  label = "",
+  label = "Current PaO2 (mmHg) or SpO2 (%):",
   value = 100,
   min = 0,
   max = 1000,
@@ -637,7 +624,7 @@ renderPlot({
     geom_point(aes(x = patient_fio2, y = patient_peep)) +
     geom_label(aes(x = patient_fio2, y = patient_peep), label = "patient", nudge_y = 1.5) +
     theme_bw() +
-    labs(title = "Patient PEEP and FiO2 Compared to ARDSnet Recommendations", subtitle = "Lower and higher PEEP strategies are in blue and red, respectively.") +
+    labs(title = "Patient PEEP and FiO2 Compared to ARDSnet", subtitle = "Lower/higher PEEP strategies are in blue/red, respectively.") +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
     xlab("Fio2 (%)") +
     ylab("PEEP (cmH2O)")
