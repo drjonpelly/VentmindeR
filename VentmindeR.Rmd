@@ -25,27 +25,43 @@ library(citr)
 
 # Introduction {.white-box}
 
-Welcome to **VentmindeR** (version 1.1, updated 29 July, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
+**Welcome:**
+
+Welcome to **VentmindeR** (version 1.3, updated 29 July, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
 
 **About Each Calculator:**
 
-*Rate Change* is for use in adjusting ventilator rate based on a current and desired blood gas value. It assumes an inverse linear relationship between rate and pCO2, which is **only** true if you are not simultaneously adjusting tidal volume. This calculator assumes a patient is not breathing above their set rate.
+*Rate Change* is for use in adjusting ventilator rate based on current and desired blood gas values. It assumes an inverse linear relationship between rate and pCO2, which is **only** true if you are not simultaneously adjusting tidal volume. This calculator assumes a patient is not breathing above their set rate.
 
-*Rate/Volume Change * is for use in adjusting ventilator rate and tidal volume based on a current and desired blood gas value. It assumes an inverse linear relationship between minute ventilation and pCO2, which, by definition, assumes that the patient's dead space fraction is constant. **Please note** that changes in dead space fraction after volume adjustments may occur. This calculator assumes a patient is not breathing above their set rate.
+*Rate/Volume Change * is for use in adjusting ventilator rate and tidal volume based on current and desired blood gas values. It assumes an inverse linear relationship between minute ventilation and pCO2. This, by definition, assumes that the patient's dead space fraction is constant. **Please note** that changes in dead space fraction after volume adjustments may occur. This calculator assumes a patient is not breathing above their set rate.
 
-*Compliance & Resistance* is for use to calculate a patient's compliance, resistance, and (inspiratory) time constant. It is designed to be used in **square-flow, volume control mode**. This calculator assumes a passive patient (it does not account for $P_{mus}$, or effort exerted by the patient).
+*Compliance & Resistance* is for use to calculate a patient's compliance, resistance, and (inspiratory) time constant. It is designed to be used in **constant-flow (square-wave), volume control mode**. This calculator assumes a passive patient (it does not account for $P_{mus}$, or effort exerted by the patient).
 
 *Time Constant* is for use in obtaining an instantaneous time constant from a patient's flow and volume scalars in any mode during passive exhalation. It is recommended that you obtain values from several different points on the exhalation curve, or across multiple breaths, to increase accuracy. Again, this calculator assumes that exhalation is **passive** (exponential decay) and cannot account for an actively exhaling patient.
 
-*P/F & OI* is for use in determining a patient's measures of oxygenation obtained from an arterial blood gas (P/F ratio and oxygenation index), or pulse oximetry (S/F ratio and oxygenation saturation index). If a value for PEEP is provided, it will also plot the patient's FiO2 (%) and PEEP in comparison to the ARDSnet recommendations.
-
-**Disclaimer:**
-
-These calculators are **not** a substitute for medical advice, and are provided freely with *absolutely no warranty*. Use of these tools should be considered **at your own risk**.
+*P/F & OI* is for use in determining a patient's measures of oxygenation obtained from an arterial blood gas (P/F ratio and oxygenation index), or pulse oximetry (S/F ratio and oxygen saturation index). If a value for PEEP is provided, it will also plot the patient's FiO2 (%) and PEEP in comparison to the ARDSnet recommendations.
 
 **Source Code:**
 
-Medical tools should be free and transparent. The source code for this calculator is publicly available at: https://github.com/drjonpelly/VentmindeR
+Medical tools should be free and transparent. The source code for this calculator is publicly available at: https://github.com/drjonpelly/VentmindeR. You are free to copy, modify, and/or distribute this code under two conditions: 1) the product you make is free for others to use (you don't sell it), and 2) you cite the original app (because I worked hard on it).
+
+**About the Author:**
+
+Jonathan Pelletier is a fellow in Pediatric Critical Care Medicine. He has interests in data science and using machine learning to assist clinical decision making. When not slaving away at a computer, he enjoys cycling, hiking, and spending time with his family. https://twitter.com/drjonpelly
+
+**Plain Language Disclaimer:**
+
+Hey there, UseR, someone’s life depends on what you’re doing here. *Manage that ventilator with the same reverence and care with which you would pack a parachute.* This calculator makes some assumptions about you, the UseR. It assumes that you’re a trained medical professional with expertise in ventilator management, and a license to back you up. It also assumes that you know what the values you’re generating mean, and what to do with them. When you use VentmindeR, you explicitly acknowledge 1) that you are a trained medical professional with ventilator expertise and 2) that you will thoughtfully consider the data you’re generating in the context of the human who is depending on you, and **not** blindly follow a calculator. There’s a reason that you spent years and thousands of dollars to learn how to manage a ventilator, and this calculator simply can’t replicate the complex decision-making you need to do on a daily basis. VentmindeR exists to make bedside math faster; it is **not** a substitute for a well-trained clinician.
+	
+While I’ve tried to incorporate some “sanity check” warnings, you can still manipulate VentmindeR to give you dangerous, or even life-threatening, values. The fact that the rate limit warning fires at 28 breaths/min does **not** mean that your severe asthmatic with a time constant of 2 seconds can tolerate a rate of 27 breaths/min. I simply can’t incorporate warnings that sophisticated without asking you for nearly every value off of the patient’s ventilator, which is just impractical. You agree that **you**, not VentmindeR, own the responsibility for your decisions. You also agree that if a calculator is giving you a concerning or unrealistic value, that you’ll treat it with skepticism and manage the patient according to good clinical medicine. Even if the time constant calculator tells you your patient could tolerate a respiratory rate of 40 breaths/min, that’s probably still a terrible idea unless you have a very specific reason for choosing that approach. Lastly, you acknowledge that VentmindeR and its services don’t guarantee accuracy, and that no one is forcing you to use them. You should consider using these calculators to be **at your own risk**.
+
+Be safe out there. What you do matters.
+
+**Legal Language Disclaimer:**
+
+In using VentmindeR online ventilator calculator, and its associated or services, you, the user, are acknowledging that you are a licensed healthcare professional with expertise in ventilator physiology and management. You further agree that any services provided are provided explicitly without warranty or guarantee of any kind, including guarantees of accuracy. VentmindeR does not provide medical advice, and its goods and services are not intended as medical recommendations. You agree to assume full responsibility for any personal injury, loss, or damages, to yourself and any parties related to medical decisions made after using VentmindeR. You further release and discharge VentmindeR, and its creators, from any injury, loss, or damage that results from using VentmindeR or its services, whether caused by the fault of yourself, VentmindeR, or other third parties. You agree to indemnify and defend VentmindeR, and its creators, against all claims, causes of action, damages, judgments, costs or expenses, including attorney fees and other litigation costs, which may in any way arise from your use of VentmindeR or its services.
+
+You acknowledge that you are under no pressure or duress to use VentmindeR or its services, and that you have been given a reasonable opportunity to review this agreement before using VentmindeR or its services. The invalidity or unenforceability of any provision of this agreement, whether standing alone or as applied to a particular occurrence or circumstance, shall not affect the validity or enforceability of any other provision of this agreement or of any other applications of such provision, as the case may be, and such invalid or unenforceable provision shall be deemed not to be a part of this agreement.
 
 # Rate Change
 
