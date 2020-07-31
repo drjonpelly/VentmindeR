@@ -1,12 +1,14 @@
 ---
 title: "VentmindeR"
 runtime: shiny
-output: 
+output:
   flexdashboard::flex_dashboard:
     orientation: columns
     vertical_layout: fill
     theme: cerulean
 bibliography: Ventilator_Dashboard_Library.bib
+resource_files:
+- Ventilator_Dashboard_Library.bib
 ---
 
 ```{r global, include=FALSE}
@@ -27,7 +29,7 @@ library(citr)
 
 **Welcome:**
 
-Welcome to **VentmindeR** (version 1.3, updated 29 July, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
+Welcome to **VentmindeR** (version 1.4, updated 31 July, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
 
 **About Each Calculator:**
 
@@ -483,8 +485,30 @@ renderPlot({
     geom_line() +
     geom_vline(aes(xintercept = tc * 3), lty = 2, color = "red") +
     geom_vline(aes(xintercept = tc), lty = 2, color = "blue") +
-    geom_label(aes(tc * 3 + 1, 25), label = paste(round(tc * 3, 1), "seconds\n3 Time Constants\n95% Vt Exhaled"), color = "red") +
-    geom_label(aes(tc + 1, 75), label = paste(round(tc, 1), "seconds\n1 Time Constant\n37% Vt Exhaled"), color = "blue") +
+    geom_label(aes(tc * 3 + 0.6, 25), label = paste(round(tc * 3, 1), "seconds\n3 Time Constants\n95% Vt Exhaled"), color = "red") +
+    geom_label(aes(tc + 0.6, 75), label = paste(round(tc, 1), "seconds\n1 Time Constant\n37% Vt Exhaled"), color = "blue") +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    labs(title = "Percent of Tidal Volume Exhaled over Time") +
+    ylab("% of Tidal Volume Remaining") +
+    scale_x_continuous(breaks = seq(0, 10, 2), name = "Exhale Time (seconds)")
+})
+```
+
+### Graph of Exhalation over Time {.white-box .mobile}
+
+```{r exhale_graph_mobile}
+renderPlot({
+  tc <- input$tc_v / 1000 / input$tc_flow * 60
+
+  tibble(time = seq(0, 10, 0.05)) %>%
+    mutate(remaining = exp(-time / tc)) %>%
+    ggplot(aes(time, remaining * 100)) +
+    geom_line() +
+    geom_vline(aes(xintercept = tc * 3), lty = 2, color = "red") +
+    geom_vline(aes(xintercept = tc), lty = 2, color = "blue") +
+    geom_label(aes(tc * 3 + 1.7, 25), label = paste(round(tc * 3, 1), "seconds\n3 Time Constants\n95% Vt Exhaled"), color = "red") +
+    geom_label(aes(tc + 1.7, 75), label = paste(round(tc, 1), "seconds\n1 Time Constant\n37% Vt Exhaled"), color = "blue") +
     theme_bw() +
     theme(plot.title = element_text(hjust = 0.5)) +
     labs(title = "Percent of Tidal Volume Exhaled over Time") +
@@ -638,7 +662,38 @@ renderPlot({
     geom_ribbon(aes(ymin = lower_peep_1, ymax = lower_peep_2), color = "blue", fill = "blue", alpha = 0.1) +
     geom_ribbon(aes(ymin = upper_peep_1, ymax = upper_peep_2), color = "red", fill = "red", alpha = 0.1) +
     geom_point(aes(x = patient_fio2, y = patient_peep)) +
-    geom_label(aes(x = patient_fio2, y = patient_peep), label = "patient", nudge_y = 1.5) +
+    geom_label(aes(x = patient_fio2, y = patient_peep), label = "patient", nudge_y = 3) +
+    theme_bw() +
+    labs(title = "Patient PEEP and FiO2 Compared to ARDSnet", subtitle = "Lower/higher PEEP strategies are in blue/red, respectively.") +
+    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+    xlab("Fio2 (%)") +
+    ylab("PEEP (cmH2O)")
+})
+```
+
+### ARDSnet PEEP Recommendations {.mobile}
+
+```{r ardsnet_peep_graph_mobile}
+renderPlot({
+  patient_fio2 <- input$oi_fio2
+  patient_peep <- input$oi_peep
+
+  tribble(
+    ~fio2, ~lower_peep_1, ~lower_peep_2, ~upper_peep_1, ~upper_peep_2,
+    30, 5, 5, 5, 14,
+    40, 5, 8, 14, 16,
+    50, 8, 10, 16, 20,
+    60, 10, 10, 20, 20,
+    70, 10, 14, 20, 20,
+    80, 14, 14, 20, 22,
+    90, 14, 18, 22, 22,
+    100, 18, 24, 22, 24,
+  ) %>%
+    ggplot(aes(fio2)) +
+    geom_ribbon(aes(ymin = lower_peep_1, ymax = lower_peep_2), color = "blue", fill = "blue", alpha = 0.1) +
+    geom_ribbon(aes(ymin = upper_peep_1, ymax = upper_peep_2), color = "red", fill = "red", alpha = 0.1) +
+    geom_point(aes(x = patient_fio2, y = patient_peep)) +
+    geom_label(aes(x = patient_fio2, y = patient_peep), label = "patient", nudge_y = 0.8, nudge_x = 5) +
     theme_bw() +
     labs(title = "Patient PEEP and FiO2 Compared to ARDSnet", subtitle = "Lower/higher PEEP strategies are in blue/red, respectively.") +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
