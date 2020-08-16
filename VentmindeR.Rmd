@@ -17,6 +17,10 @@ library(tidyverse)
 library(shiny)
 library(ggrepel)
 library(citr)
+library(grid)
+library(kableExtra)
+library(citr)
+library(styler)
 ```
 
 <style>
@@ -29,7 +33,7 @@ library(citr)
 
 **Welcome:**
 
-Welcome to **VentmindeR** (version 1.4, updated 31 July, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
+Welcome to **VentmindeR** (version 1.7, updated 16 August, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
 
 **About Each Calculator:**
 
@@ -42,6 +46,8 @@ Welcome to **VentmindeR** (version 1.4, updated 31 July, 2020) a free, online, m
 *Time Constant* is for use in obtaining an instantaneous time constant from a patient's flow and volume scalars in any mode during passive exhalation. It is recommended that you obtain values from several different points on the exhalation curve, or across multiple breaths, to increase accuracy. Again, this calculator assumes that exhalation is **passive** (exponential decay) and cannot account for an actively exhaling patient.
 
 *P/F & OI* is for use in determining a patient's measures of oxygenation obtained from an arterial blood gas (P/F ratio and oxygenation index), or pulse oximetry (S/F ratio and oxygen saturation index). If a value for PEEP is provided, it will also plot the patient's FiO2 (%) and PEEP in comparison to the ARDSnet recommendations.
+
+*Qp:Qs* is for use in determining the ratio of pulmonary to systemic blood flow in congenital heart disease patients with obligatory 1:1 mixing lesions. If hemoglobin is provided, it will also calculate the oxygen content of a patient's blood. If $P_{a}O_{2}$ is provided, it will also plot the patient's oxygen saturation relative to their partial pressure of oxygen to analyze shift.
 
 **Source Code:**
 
@@ -64,6 +70,23 @@ Be safe out there. What you do matters.
 In using VentmindeR online ventilator calculator, and its associated or services, you, the user, are acknowledging that you are a licensed healthcare professional with expertise in ventilator physiology and management. You further agree that any services provided are provided explicitly without warranty or guarantee of any kind, including guarantees of accuracy. VentmindeR does not provide medical advice, and its goods and services are not intended as medical recommendations. You agree to assume full responsibility for any personal injury, loss, or damages, to yourself and any parties related to medical decisions made after using VentmindeR. You further release and discharge VentmindeR, and its creators, from any injury, loss, or damage that results from using VentmindeR or its services, whether caused by the fault of yourself, VentmindeR, or other third parties. You agree to indemnify and defend VentmindeR, and its creators, against all claims, causes of action, damages, judgments, costs or expenses, including attorney fees and other litigation costs, which may in any way arise from your use of VentmindeR or its services.
 
 You acknowledge that you are under no pressure or duress to use VentmindeR or its services, and that you have been given a reasonable opportunity to review this agreement before using VentmindeR or its services. The invalidity or unenforceability of any provision of this agreement, whether standing alone or as applied to a particular occurrence or circumstance, shall not affect the validity or enforceability of any other provision of this agreement or of any other applications of such provision, as the case may be, and such invalid or unenforceable provision shall be deemed not to be a part of this agreement.
+
+**Colophon:**
+
+This tool was built using [RStudio](https://rstudio.com/products/rstudio/) running `r sessionInfo()$R.version$version.string`, and the following packages:
+
+```{r colophon_table}
+package_names <- unlist(map(sessionInfo()$otherPkgs, ~ .$Package))
+package_versions <- unlist(map(sessionInfo()$otherPkgs, ~ .$Version))
+package_repository <- unlist(map(sessionInfo()$otherPkgs, ~ .$Repository))
+
+knitr::kable(tibble(package_names, package_versions, package_repository) %>%
+  arrange(package_names) %>%
+  rename(Package = package_names, Version = package_versions, Source = package_repository)) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = F)
+
+rm(package_names, package_versions, package_repository)
+```
 
 # Rate Change
 
@@ -457,7 +480,7 @@ numericInput(
 renderText({
   time_constant <- input$tc_v / 1000 / input$tc_flow * 60
 
-  paste("The patient's time constant is: ", round(time_constant, 2), " seconds. The patient must have an exhalation time of ", round(time_constant * 3, 2), " seconds. Given that you have specified an inspiratory time of ", input$cr_itime, " seconds, the maximum safe respiratory rate for this patient is ", round(60 / (time_constant * 3 + input$tc_itime), 1), " breaths per minute to prevent air trapping.", sep = "")
+  paste("The patient's time constant is: ", round(time_constant, 2), " seconds. The patient must have an exhalation time of ", round(time_constant * 3, 2), " seconds. Given that you have specified an inspiratory time of ", input$tc_itime, " seconds, the maximum safe respiratory rate for this patient is ", round(60 / (time_constant * 3 + input$tc_itime), 1), " breaths per minute to prevent air trapping.", sep = "")
 })
 ```
 
@@ -702,7 +725,216 @@ renderPlot({
 })
 ```
 
+# Qp:Qs
+
+## Inputs {.sidebar}
+
+```{r qp_qs_inputs}
+
+numericInput(
+  inputId = "ao_sat",
+  label = "Arterial Oxygen Saturation (%):",
+  value = 80,
+  min = 0,
+  max = 100,
+  step = 1
+)
+
+numericInput(
+  inputId = "svc_sat",
+  label = "Mixed Venous Oxygen Saturation (%):",
+  value = 60,
+  min = 0,
+  max = 100,
+  step = 1
+)
+
+numericInput(
+  inputId = "pv_sat",
+  label = "Pulmonary Venous Oxygen Saturation (%)",
+  value = 100,
+  min = 0,
+  max = 100,
+  step = 1
+)
+
+numericInput(
+  inputId = "hgb",
+  label = "Hemoglobin (mg/dL):",
+  value = 12.0,
+  min = 0,
+  max = 100,
+  step = 0.1
+)
+
+numericInput(
+  inputId = "qp_qs_pao2",
+  label = "Partial Pressure of Oxygen (mmHg):",
+  value = 40,
+  min = 0,
+  max = 1000,
+  step = 1
+)
+```
+
+## Outputs
+
+### Numeric Results {.white-box}
+
+```{r qp_qs_numeric_result}
+renderText({
+  qp_qs <- (input$ao_sat - input$svc_sat) / (input$pv_sat - input$ao_sat)
+  carrying_capacity <- 1.34 * input$hgb * input$ao_sat / 100 + 0.003 * input$qp_qs_pao2
+  paste("The pulmonary to systemic blood flow ratio (Qp:Qs) is ", round(qp_qs, 2), " to 1. ", "The patient's blood oxygen content is ", round(carrying_capacity, 2), " ml/dL.", sep = "")
+})
+```
+
+### Equation and Rationale {.white-box}
+
+In a patient with an obligatory 1:1 mixing lesion (e.g. hypoplastic left heart syndrome with mitral and aortic atresia, as drawn), the $Q_{p}:Q_{s}$ ratio can be calculated by the following equation:
+
+$Q_{p}:Q_{s} = \frac{S_{a}O2-S_{v}O2}{S_{PV}O2-S_{PA}O2}$
+
+**Assuming** that the patient has an obligatory 1:1 mixing lesion (no forward flow across the aortic valve), then the pulmonary artery saturation is the same as the arterial oxygen saturation. In patients with healthy lungs, the pulmonary venous saturation is usually **assumed** to be 100%.
+
+Blood oxygen content is calculated by the following equation:
+
+$C_{a}O_{2}=\frac{1.34*Hemoglobin(\frac{mg}{dL})*S_{p}O_{2}}{100}+0.003*P_{a}O_{2}$
+
+## Graphical Results
+
+### Diagram {.white-box}
+
+```{r qp_qs_graphical_result}
+
+circleFun <- function(center = c(0, 0), diameter = 1, npoints = 100) {
+  r <- diameter / 2
+  tt <- seq(0, 2 * pi, length.out = npoints)
+  xx <- center[1] + r * cos(tt)
+  yy <- center[2] + r * sin(tt)
+  return(data.frame(x = xx, y = yy))
+}
+
+lupv <- circleFun(c(3.75, 3.75), .25, npoints = 100)
+llpv <- circleFun(c(3.75, 3.5), .25, npoints = 100)
+rupv <- circleFun(c(3.5, 3.75), .25, npoints = 100)
+rlpv <- circleFun(c(3.5, 3.5), .25, npoints = 100)
+
+
+renderPlot({
+  svc_sat <- input$svc_sat
+  ao_sat <- input$ao_sat
+  pv_sat <- input$pv_sat
+
+  tribble(
+    ~x, ~y,
+    1, 1,
+    2, 2,
+    3, 3,
+    4, 4,
+    5, 5,
+  ) %>%
+    ggplot(aes(x = x, y = y)) +
+    geom_rect(aes(xmin = 2, xmax = 3, ymin = 3, ymax = 4), fill = "purple", alpha = 0.1) + # RV
+    geom_rect(aes(xmin = 2, xmax = 3, ymin = 2, ymax = 3), fill = "purple", alpha = 0.1) + # RA
+    geom_rect(aes(xmin = 2.4, xmax = 2.6, ymin = 4, ymax = 5), fill = "blue", alpha = 0.1) + # SVC
+    geom_rect(aes(xmin = 1, xmax = 2, ymin = 3.4, ymax = 3.6), fill = "blue", alpha = 0.1) + # IVC
+    geom_rect(aes(xmin = 3, xmax = 4, ymin = 2, ymax = 3), fill = "black", alpha = 0.1) + # LV
+    geom_rect(aes(xmin = 3, xmax = 4, ymin = 3, ymax = 4), fill = "purple", alpha = 0.1) + # LA
+    geom_rect(aes(xmin = 2.3, xmax = 2.7, ymin = 1, ymax = 2), fill = "purple", alpha = 0.1) + # MPA
+    geom_rect(aes(xmin = 3.3, xmax = 3.7, ymin = 1, ymax = 2), fill = "purple", alpha = 0.1) + # Ao
+    geom_rect(aes(xmin = 2.7, xmax = 3.3, ymin = 1.4, ymax = 1.6), fill = "purple", alpha = 0.1) + # PDA
+    geom_segment(aes(x = 3, y = 4, xend = 3, yend = 3.7)) + # atrial septum top
+    geom_segment(aes(x = 3, y = 3.3, xend = 3, yend = 2)) + # atrial septum bottom, ventricular septum
+    geom_segment(aes(x = 2.7, y = 3, xend = 4, yend = 3)) + # mitral
+    geom_segment(aes(x = 2, y = 3, xend = 2.3, yend = 3)) + # tricuspid
+    geom_segment(aes(x = 2.5, y = 2.7, xend = 2.7, yend = 3)) + # tricuspid valve
+    geom_segment(aes(x = 2, y = 2, xend = 2, yend = 3.4)) + # right wall bottom
+    geom_segment(aes(x = 2, y = 3.6, xend = 2, yend = 4)) + # right wall top
+    geom_segment(aes(x = 2, y = 4, xend = 2.4, yend = 4)) + # top wall left
+    geom_segment(aes(x = 2.6, y = 4, xend = 4, yend = 4)) + # top wall right
+    geom_segment(aes(x = 4, y = 4, xend = 4, yend = 2)) + # left wall
+    geom_segment(aes(x = 2, y = 2, xend = 2.3, yend = 2)) + # bottom wall right
+    geom_segment(aes(x = 2.7, y = 2, xend = 4, yend = 2)) + # bottom wall left
+    geom_segment(aes(x = 2.5, y = 1.7, xend = 2.7, yend = 2)) + # pulmonary valve
+    geom_segment(aes(x = 3.75, y = 3.75, xend = 4.25, yend = 4.25)) + # pulmonary vein label
+    geom_polygon(data = lupv, aes(x, y), fill = "red", color = "black") + # lupv
+    geom_polygon(data = llpv, aes(x, y), fill = "red", color = "black") + # llpv
+    geom_polygon(data = rupv, aes(x, y), fill = "red", color = "black") + # rupv
+    geom_polygon(data = rlpv, aes(x, y), fill = "red", color = "black") + # rlpv
+    geom_segment(aes(x = 3.1, y = 3.5, xend = 2.9, yend = 3.5),
+      arrow = arrow(length = unit(0.2, "cm"))
+    ) + # ASD arrow
+    geom_segment(aes(x = 2.5, y = 3.1, xend = 2.5, yend = 2.9),
+      arrow = arrow(length = unit(0.2, "cm"))
+    ) + # tricuspid arrow
+    geom_segment(aes(x = 2.5, y = 2.1, xend = 2.5, yend = 1.9),
+      arrow = arrow(length = unit(0.2, "cm"))
+    ) + # pulmonary arrow
+    geom_segment(aes(x = 2.9, y = 1.5, xend = 3.1, yend = 1.5),
+      arrow = arrow(length = unit(0.2, "cm"))
+    ) + # PDA arrow
+    geom_segment(aes(x = 2.5, y = 1.5, xend = 2.5, yend = 1.3),
+      arrow = arrow(length = unit(0.2, "cm"))
+    ) + # MPA arrow
+    geom_segment(aes(x = 3.5, y = 1.5, xend = 3.5, yend = 1.3),
+      arrow = arrow(length = unit(0.2, "cm"))
+    ) + # Ao arrow down
+    geom_segment(aes(x = 3.5, y = 1.5, xend = 3.5, yend = 1.7),
+      arrow = arrow(length = unit(0.2, "cm"))
+    ) + # Ao arrow up
+    geom_text(aes(2.2, 4.8), label = "SVC", size = 3) +
+    geom_text(aes(1.5, 3.7), label = "IVC", size = 3) +
+    geom_text(aes(2.2, 3.8), label = "RA", size = 3) +
+    geom_text(aes(2.2, 2.8), label = "RV", size = 3) +
+    geom_text(aes(3.2, 3.8), label = "LA", size = 3) +
+    geom_text(aes(3.5, 2.8), label = "LV\n(excluded)", size = 3) +
+    geom_text(aes(2.1, 1.8), label = "MPA", size = 3) +
+    geom_text(aes(3.85, 1.8), label = "Ao", size = 3) +
+    geom_text(aes(3, 1.7), label = "PDA", size = 3) +
+    geom_text(aes(4.35, 4.35), label = "Pulmonary Veins", size = 3) +
+    geom_text(aes(2.2, 4.6), label = paste(svc_sat, "%", sep = ""), size = 3, color = "blue") +
+    geom_text(aes(3.9, 1.6), label = paste(ao_sat, "%", sep = ""), size = 3, color = "purple") +
+    geom_text(aes(2.1, 1.6), label = paste(ao_sat, "%", sep = ""), size = 3, color = "purple") +
+    geom_text(aes(4.6, 4.15), label = paste(pv_sat, "%", sep = ""), size = 3, color = "red") +
+    coord_fixed() +
+    theme_bw() +
+    theme(
+      axis.title.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank()
+    )
+})
+```
+
+### Patient PaO2 and SpO2 Compared to Physiologic {.white-box}
+
+```{r pao2_spo2_curve}
+
+renderPlot({
+  patient_pao2 <- input$qp_qs_pao2
+  patient_spo2 <- input$ao_sat
+
+  tibble(pao2 = seq(0, 150, 1)) %>%
+    mutate(spo2 = ((((pao2^3 + 150 * pao2)^(-1) * 23400) + 1)^-1) * 100) %>%
+    ggplot(aes(pao2, spo2)) +
+    geom_smooth(se = FALSE, color = "black", method = "loess", formula = "y~x") +
+    geom_point(aes(patient_pao2, patient_spo2), color = "red") +
+    geom_label(aes(patient_pao2, patient_spo2), label = "patient", nudge_x = -9, nudge_y = +6) +
+    theme_bw() +
+    xlab("PaO2 (mmHg)") +
+    ylab("Oxygen Saturation (%)") +
+    labs(caption = "Severinghaus JW.\nSimple, accurate equations for human blood O2 dissociation computations.\nJ Appl Physiol Respir Environ Exerc Physiol. 1979 Mar;46(3):599-602.") +
+    theme(plot.title = element_text(hjust = 0.5))
+})
+```
+
 
 # References  {.white-box}
+
+## References
 
 @RN5, @RN8, @RN6, @RN30, @RN11, @RN12, @RN4, @RN14, @RN15, @RN29, @RN19, @RN18, @RN17, @RN16, @RN20, @RN1, @RN21, @RN22, @RN23, @RN3, @RN24, @RN25, @RN26, @RN27, @RN28, and @RN2
