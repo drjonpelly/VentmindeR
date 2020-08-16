@@ -21,6 +21,8 @@ library(grid)
 library(kableExtra)
 library(citr)
 library(styler)
+library(flexdashboard)
+library(flextable)
 ```
 
 <style>
