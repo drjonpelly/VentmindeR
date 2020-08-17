@@ -35,7 +35,7 @@ library(flextable)
 
 **Welcome:**
 
-Welcome to **VentmindeR** (version 1.7, updated 16 August, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
+Welcome to **VentmindeR** (version 2.0, updated 17 August, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
 
 **About Each Calculator:**
 
@@ -57,7 +57,7 @@ Medical tools should be free and transparent. The source code for this calculato
 
 **About the Author:**
 
-Jonathan Pelletier is a fellow in Pediatric Critical Care Medicine. He has interests in data science and using machine learning to assist clinical decision making. When not slaving away at a computer, he enjoys cycling, hiking, and spending time with his family. https://twitter.com/drjonpelly
+[Jonathan Pelletier](https://twitter.com/drjonpelly) is a fellow in Pediatric Critical Care Medicine. He has interests in data science and using machine learning to assist clinical decision making. When not slaving away at a computer, he enjoys cycling, hiking, and spending time with his family. 
 
 **Plain Language Disclaimer:**
 
@@ -75,7 +75,7 @@ You acknowledge that you are under no pressure or duress to use VentmindeR or it
 
 **Colophon:**
 
-This tool was built using [RStudio](https://rstudio.com/products/rstudio/) running `r sessionInfo()$R.version$version.string`, and the following packages:
+VentmindeR was built using [RStudio](https://rstudio.com/products/rstudio/). This server is running `r sessionInfo()$R.version$version.string` on `r sessionInfo()$running`, and the following packages:
 
 ```{r colophon_table}
 package_names <- unlist(map(sessionInfo()$otherPkgs, ~ .$Package))
@@ -98,7 +98,7 @@ rm(package_names, package_versions, package_repository)
 
 numericInput(
   inputId = "current_pco2",
-  label = "Current pCO2:",
+  label = "Current pCO2 (mmHg):",
   value = 40,
   min = 0,
   max = 100,
@@ -106,7 +106,7 @@ numericInput(
 )
 numericInput(
   inputId = "current_rate",
-  label = "Current Ventilator Rate:",
+  label = "Current Ventilator Rate (breaths/min):",
   value = 20,
   min = 0,
   max = 40,
@@ -114,7 +114,7 @@ numericInput(
 )
 numericInput(
   inputId = "desired_pco2",
-  label = "Desired pCO2:",
+  label = "Desired pCO2  (mmHg):",
   value = 40,
   min = 0,
   max = 100,
@@ -130,8 +130,8 @@ numericInput(
 # Perform rate calculation
 renderText({
   ifelse(input$current_pco2 * input$current_rate / input$desired_pco2 >= 28,
-    paste("Your desired rate is: ", round(input$current_pco2 * input$current_rate / input$desired_pco2, 0), ". WARNING: at this rate, a time constant calculation is recommended to prevent air trapping.", sep = ""),
-    paste("Your desired rate is: ", round(input$current_pco2 * input$current_rate / input$desired_pco2, 0), ".", sep = "")
+    paste("Your desired rate is: ", round(input$current_pco2 * input$current_rate / input$desired_pco2, 0), " breaths/min. WARNING: at this rate, a time constant calculation is recommended to prevent air trapping.", sep = ""),
+    paste("Your desired rate is: ", round(input$current_pco2 * input$current_rate / input$desired_pco2, 0), " breaths/min.", sep = "")
   )
 })
 ```
@@ -156,29 +156,35 @@ renderPlot({
   current_rate <- input$current_rate
   desired_pco2 <- input$desired_pco2
   desired_rate <- current_pco2 * current_rate / desired_pco2
+  
+  rate_curve_table <- tibble(seq(10, 40, 1)) %>%
+    rename(rate = `seq(10, 40, 1)`) %>%
+    mutate(co2 = current_pco2 * current_rate / rate)
 
   colors <- c(
     "current" = "red",
-    "desired" = "blue"
+    "desired" = "blue",
+    "20" = "black",
+    "60" = "black"
   )
   tribble(
     ~rate, ~co2, ~color_mapping, ~point_name,
     current_rate, current_pco2, "red", "current",
-    desired_rate, desired_pco2, "blue", "desired"
+    desired_rate, desired_pco2, "blue", "desired",
   ) %>%
     ggplot(aes(x = rate, y = co2)) +
-    geom_line() +
     geom_point(aes(color = point_name)) +
+    geom_line(mapping = aes(rate, co2), data = rate_curve_table) +
     scale_color_manual(values = colors) +
     geom_label_repel(aes(label = point_name)) +
     theme_bw() +
-    labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.") +
-    xlab("Ventilator Rate") +
-    ylab("pCO2") +
+    labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.", caption = "Wexler HR, Lok P.\nA simple formula for adjusting arterial carbon dioxide tension.\nCan Anaesth Soc J 1981;28(4):370-2.") +
+    xlab("Ventilator Rate (breaths/min)") +
+    ylab("Predicted pCO2 (mmHg)") +
     theme(legend.position = "none", plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
 })
 
-rm(colors, current_pco2, current_rate, desired_pco2, desired_rate)
+rm(colors, current_pco2, current_rate, desired_pco2, desired_rate, rate_curve_table)
 ```
 
 # Rate/Volume Change
@@ -189,7 +195,7 @@ rm(colors, current_pco2, current_rate, desired_pco2, desired_rate)
 
 numericInput(
   inputId = "rv_current_pco2",
-  label = "Current pCO2:",
+  label = "Current pCO2 (mmHg):",
   value = 40,
   min = 0,
   max = 100,
@@ -197,7 +203,7 @@ numericInput(
 )
 numericInput(
   inputId = "rv_current_rate",
-  label = "Current Ventilator Rate:",
+  label = "Current Ventilator Rate (breaths/min):",
   value = 20,
   min = 0,
   max = 40,
@@ -213,7 +219,7 @@ numericInput(
 )
 numericInput(
   inputId = "rv_desired_pco2",
-  label = "Desired pCO2:",
+  label = "Desired pCO2 (mmHg):",
   value = 40,
   min = 0,
   max = 100,
@@ -228,7 +234,7 @@ selectInput(
 
 numericInput(
   inputId = "rv_desired_numeric",
-  label = "Desired Tidal Volume (ml/kg) or Rate:",
+  label = "Desired Tidal Volume (ml/kg) or Rate (breaths/min):",
   value = 8,
   min = 0,
   max = 100,
@@ -247,8 +253,8 @@ renderText({
     desired_rate_rv <- input$rv_current_pco2 * input$rv_current_rate * input$rv_current_tv / input$rv_desired_pco2 / input$rv_desired_numeric
 
     out <- ifelse(desired_rate_rv >= 28,
-      paste("Your desired rate is: ", round(desired_rate_rv, 0), ". WARNING: at this rate, a time constant calculation is recommended to prevent air trapping.", sep = ""),
-      paste("Your desired rate is: ", round(desired_rate_rv, 0), ".", sep = "")
+      paste("Your desired rate is: ", round(desired_rate_rv, 0), " breaths/min. WARNING: at this rate, a time constant calculation is recommended to prevent air trapping.", sep = ""),
+      paste("Your desired rate is: ", round(desired_rate_rv, 0), " breaths/min.", sep = "")
     )
   }
 
@@ -277,12 +283,20 @@ $Rate_{Current}*TidalVolume_{Current}*pCO2_{Current} = Rate_{Desired}*TidalVolum
 
 **Please note** that this relationship assumes that a patient's dead space fraction or $\frac{V_{d}}{V_{t}}$ is constant. **This may not be true**, particularly after volume adjustments.
 
+## Graphical Output
+
 ### Graph of pCO2 and Minute Ventilation {.white-box}
 
 ```{r show_rv_plot}
 renderPlot({
   current_mv <- input$rv_current_rate * input$rv_current_tv
   desired_mv <- input$rv_current_rate * input$rv_current_tv * input$rv_current_pco2 / input$rv_desired_pco2
+  current_pco2 <- input$rv_current_pco2
+  desired_pco2 <- input$rv_desired_pco2
+
+  mv_curve_table <- tibble(seq(50, 300, 1)) %>%
+    rename(minute_ventilation = `seq(50, 300, 1)`) %>%
+    mutate(pco2 = current_mv * current_pco2 / minute_ventilation)
 
   colors <- c(
     "current" = "red",
@@ -295,15 +309,88 @@ renderPlot({
     desired_mv, input$rv_desired_pco2, "desired"
   ) %>%
     ggplot(aes(x = minute_ventilation, y = pco2)) +
-    geom_line() +
+    geom_line(aes(minute_ventilation, pco2), data = mv_curve_table) +
     geom_point(aes(color = point_name)) +
     scale_color_manual(values = colors) +
     geom_label_repel(aes(label = point_name)) +
     theme_bw() +
-    labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.") +
+    labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.", caption = "Wexler HR, Lok P.\nA simple formula for adjusting arterial carbon dioxide tension.\nCan Anaesth Soc J 1981;28(4):370-2.") +
     xlab("Minute Ventilation (ml/kg/min)") +
-    ylab("pCO2") +
+    ylab("Predicted pCO2 (mmHg)") +
     theme(legend.position = "none", plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+})
+```
+
+### Graph of pCO2 and Rate Stratified by Tidal Volume {.white-box}
+
+```{r show_rate_by_vt_plot}
+renderPlot({
+  if (input$rv_desired_set == "Set Tidal Volume") {
+  current_pco2 <- input$rv_current_pco2
+  current_rate <- input$rv_current_rate
+  current_vt <- input$rv_current_tv
+  current_mv <- current_vt*current_rate
+  desired_pco2 <- input$rv_desired_pco2
+  desired_vt <- input$rv_desired_numeric
+  
+  desired_rate <- current_rate*current_vt*current_pco2/desired_pco2/desired_vt
+
+  rate_by_vt_curve_table <- tibble(rep(seq(10,40,1),4)) %>%
+    rename(rate = `rep(seq(10, 40, 1), 4)`) %>%
+    mutate(volume = c(rep(4,31),rep(6,31), rep(8,31), rep(10,31))) %>%
+    mutate(minute_ventilation = rate*volume) %>%
+    mutate(pco2 = current_mv*current_pco2/minute_ventilation) %>%
+    mutate(`Tidal Volume (ml/kg)` = factor(volume)) 
+  
+  rate_by_vol_graph <- tribble(
+    ~rate, ~pco2, ~point_name,
+    current_rate, current_pco2, "current",
+    desired_rate, desired_pco2, "desired",
+  ) %>%
+    ggplot(aes(rate,pco2))+
+    geom_line(aes(rate,pco2, lty=`Tidal Volume (ml/kg)`), data = rate_by_vt_curve_table) +
+    geom_point(color = c("red", "blue")) +
+    geom_label_repel(aes(label = point_name))+
+    xlab("Rate (breaths/min)")+
+    ylab("Predicted pCO2 (mmHg)")+
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+    labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.", caption = "Wexler HR, Lok P.\nA simple formula for adjusting arterial carbon dioxide tension.\nCan Anaesth Soc J 1981;28(4):370-2.")
+  }
+  
+  if (input$rv_desired_set == "Set Rate") {
+    current_pco2 <- input$rv_current_pco2
+  current_rate <- input$rv_current_rate
+  current_vt <- input$rv_current_tv
+  current_mv <- current_vt*current_rate
+  desired_pco2 <- input$rv_desired_pco2
+  desired_rate <- input$rv_desired_numeric
+  
+  desired_vt <- current_rate*current_vt*current_pco2/desired_pco2/desired_rate
+
+  rate_by_vt_curve_table <- tibble(rep(seq(10,40,1),4)) %>%
+    rename(rate = `rep(seq(10, 40, 1), 4)`) %>%
+    mutate(volume = c(rep(4,31),rep(6,31), rep(8,31), rep(10,31))) %>%
+    mutate(minute_ventilation = rate*volume) %>%
+    mutate(pco2 = current_mv*current_pco2/minute_ventilation) %>%
+    mutate(`Tidal Volume (ml/kg)` = factor(volume)) 
+  
+  rate_by_vol_graph <- tribble(
+    ~rate, ~pco2, ~point_name,
+    current_rate, current_pco2, "current",
+    desired_rate, desired_pco2, "desired",
+  ) %>%
+    ggplot(aes(rate,pco2))+
+    geom_line(aes(rate,pco2, lty=`Tidal Volume (ml/kg)`), data = rate_by_vt_curve_table) +
+    geom_point(color = c("red", "blue")) +
+    geom_label_repel(aes(label = point_name))+
+    xlab("Rate (breaths/min)")+
+    ylab("Predicted pCO2 (mmHg)")+
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+    labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.", caption = "Wexler HR, Lok P.\nA simple formula for adjusting arterial carbon dioxide tension.\nCan Anaesth Soc J 1981;28(4):370-2.")
+  }  
+  rate_by_vol_graph
 })
 ```
 
@@ -364,24 +451,25 @@ numericInput(
 
 ## Numeric Results
 
-### Compliance and Resistance {.white-box}
+### Numeric Results {.white-box}
+
+Below are the patient's calculated compliance, resistance, _inspiratory_ time constant and maximum safe respiratory rate **assuming** that the inspiratory and expiratory time constants are the same. **Please note** that this assumption may not be valid, especially in patients with obstructive physiology. An expiratory time constant calculation is recommended.
 
 ```{r compliance_and_resistance_numeric}
-renderText({
-  compliance <- input$cr_vt / 1000 / (input$cr_pplat - input$cr_peep)
-  resistance <- (input$cr_pip - input$cr_pplat) / (input$cr_vt / 1000 / input$cr_itime)
-  paste("The patient's compliance is: ", round(compliance, 3), " l/cmH2O (", round(compliance * 1000, 1), " ml/cmH2O). The patient's resistance is: ", round(resistance, 1), " cmH2O*seconds/l.", sep = "")
-})
-```
-
-### Time Constant and Respiratory Rate {.white-box}
-
-```{r inspiratory_time_constant_and_rate}
-renderText({
+renderTable({
   compliance <- input$cr_vt / 1000 / (input$cr_pplat - input$cr_peep)
   resistance <- (input$cr_pip - input$cr_pplat) / (input$cr_vt / 1000 / input$cr_itime)
   time_constant <- compliance * resistance
-  paste("The patient's (inspiratory) time constant is: ", round(time_constant, 2), " seconds. Assuming the inspiratory and expiratory time constants are matched, the patient must have an exhalation time of ", round(time_constant * 3, 2), " seconds. Given that you have specified an inspiratory time of ", input$cr_itime, " seconds, the maximum safe respiratory rate for this patient is ", round(60 / (time_constant * 3 + input$cr_itime), 1), " breaths per minute to prevent air trapping.", sep = "")
+  tribble(
+    ~Variable, ~Value, ~Units,
+    "Compliance", round(compliance,3), "l/cmH2O",
+    "Resistance", round(resistance, 2), "cmH2O*seconds*l",
+    "Inspiratory Time Constant", round(time_constant, 2), "seconds",
+    "Minimum Safe Exhalation Time", round(time_constant*3, 2), "seconds",
+    "Inspiratory Time", input$cr_itime, "seconds",
+    "Breath Cycle Time", round(input$cr_itime+(time_constant*3),2), "seconds",
+    "Maximum Safe Respiratory Rate", round(60 / (time_constant * 3 + input$cr_itime), 2), "breaths/min"
+  )
 })
 ```
 
@@ -399,7 +487,7 @@ $Maximum Safe Respiratory Rate=\frac{60}{3\tau+iTime}$
 
 ### Compliance
 
-```{r compliance curve}
+```{r compliance_curve}
 renderPlot({
   pt_compliance <- input$cr_vt / (input$cr_pplat - input$cr_peep)
   pt_height <- input$cr_height / 100
@@ -414,7 +502,7 @@ renderPlot({
     geom_label(aes(x = pt_height, y = pt_compliance), label = "patient", color = "blue", nudge_x = -0.1, nudge_y = 2) +
     theme_bw() +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.title = element_blank()) +
-    labs(title = "Patient Compliance Vs. Normal Compliance Curves", subtitle = "The Normal Compliance Curves are Shown in Black") +
+    labs(title = "Patient Compliance Vs. Normal Compliance Curves", subtitle = "The Normal Compliance Curves are Shown in Black", caption = "Lanteri CJ, Sly PD.\nChanges in respiratory mechanics with age.\nJ Appl Physiol (1985) 1993;74(1):369-78.") +
     xlab("Height (meters)") +
     ylab("Static Compliance (ml/cmH2O)")
 })
@@ -422,7 +510,7 @@ renderPlot({
 
 ### Resistance
 
-```{r}
+```{r resistance_curve}
 renderPlot({
   pt_resistance <- (input$cr_pip - input$cr_pplat) / (input$cr_vt / 1000 / input$cr_itime)
   pt_height <- input$cr_height / 100
@@ -437,7 +525,7 @@ renderPlot({
     geom_label(aes(x = pt_height, y = pt_resistance), label = "patient", color = "red", nudge_x = -0.1, nudge_y = 3) +
     theme_bw() +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.title = element_blank()) +
-    labs(title = "Patient Resistance Vs. Normal Resistance Curves", subtitle = "The Normal Respiratory System Resistance Curves are Shown in Black") +
+    labs(title = "Patient Resistance Vs. Normal Resistance Curves", subtitle = "The Normal Respiratory System Resistance Curves are Shown in Black", caption = "Lanteri CJ, Sly PD.\nChanges in respiratory mechanics with age.\nJ Appl Physiol (1985) 1993;74(1):369-78.") +
     xlab("Height (meters)") +
     ylab("System Resistance (cmH2O*seconds/ml)")
 })
@@ -476,13 +564,21 @@ numericInput(
 
 ## Numeric Result
 
-### Time Constant and Respiratory Rate {.white-box}
+### Numeric Results {.white-box}
+
+Below is the patient's calculated _expiratory_ time constant and maximum safe respiratory rate to prevent air trapping. **Please note** that many ventilators round the values on the screen to the nearest ml (for volume) and l/min (for flow). Because this may result in substantial rounding error, it is recommended to perform this calculation at least 3 times.
 
 ```{r show_tc_result}
-renderText({
+renderTable({
   time_constant <- input$tc_v / 1000 / input$tc_flow * 60
-
-  paste("The patient's time constant is: ", round(time_constant, 2), " seconds. The patient must have an exhalation time of ", round(time_constant * 3, 2), " seconds. Given that you have specified an inspiratory time of ", input$tc_itime, " seconds, the maximum safe respiratory rate for this patient is ", round(60 / (time_constant * 3 + input$tc_itime), 1), " breaths per minute to prevent air trapping.", sep = "")
+  tribble(
+    ~Variable, ~Value, ~Units,
+    "Expiratory Time Constant", round(time_constant, 2), "seconds",
+    "Minimum Safe Exhalation Time", round(time_constant*3, 2), "seconds",
+    "Inspiratory Time", input$tc_itime, "seconds",
+    "Breath Cycle Time", round(input$tc_itime+(time_constant*3),2), "seconds",
+    "Maximum Safe Respiratory Rate", round(60 / (time_constant * 3 + input$tc_itime), 2), "breaths/min"
+  )
 })
 ```
 
@@ -665,7 +761,7 @@ $OSI=\frac{F_{i}O2*MAP*100}{S_{p}O2}$
 
 Please note that an S/F ratio and OSI should **only** be calculated when $S_{p}O2<100$%.
 
-### ARDSnet PEEP Recommendations
+### ARDSnet (Adult) PEEP Recommendations
 
 ```{r ardsnet_peep_graph}
 renderPlot({
@@ -689,7 +785,7 @@ renderPlot({
     geom_point(aes(x = patient_fio2, y = patient_peep)) +
     geom_label(aes(x = patient_fio2, y = patient_peep), label = "patient", nudge_y = 3) +
     theme_bw() +
-    labs(title = "Patient PEEP and FiO2 Compared to ARDSnet", subtitle = "Lower/higher PEEP strategies are in blue/red, respectively.") +
+    labs(title = "Patient PEEP and FiO2 Compared to ARDSnet", subtitle = "Lower/higher PEEP strategies are in blue/red, respectively.", caption = "ARDSnet.\nNIH NHLBI ARDS Clinical Network Mechanical Ventilation Protocol Summary\n2008.") +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
     xlab("Fio2 (%)") +
     ylab("PEEP (cmH2O)")
@@ -720,7 +816,7 @@ renderPlot({
     geom_point(aes(x = patient_fio2, y = patient_peep)) +
     geom_label(aes(x = patient_fio2, y = patient_peep), label = "patient", nudge_y = 0.8, nudge_x = 5) +
     theme_bw() +
-    labs(title = "Patient PEEP and FiO2 Compared to ARDSnet", subtitle = "Lower/higher PEEP strategies are in blue/red, respectively.") +
+    labs(title = "Patient PEEP and FiO2 Compared to ARDSnet", subtitle = "Lower/higher PEEP strategies are in blue/red, respectively.", caption = "ARDSnet.\nNIH NHLBI ARDS Clinical Network Mechanical Ventilation Protocol Summary\n2008.") +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
     xlab("Fio2 (%)") +
     ylab("PEEP (cmH2O)")
@@ -923,7 +1019,7 @@ renderPlot({
   tibble(pao2 = seq(0, 150, 1)) %>%
     mutate(spo2 = ((((pao2^3 + 150 * pao2)^(-1) * 23400) + 1)^-1) * 100) %>%
     ggplot(aes(pao2, spo2)) +
-    geom_smooth(se = FALSE, color = "black", method = "loess", formula = "y~x") +
+    geom_line(color = "black") +
     geom_point(aes(patient_pao2, patient_spo2), color = "red") +
     geom_label(aes(patient_pao2, patient_spo2), label = "patient", nudge_x = -9, nudge_y = +6) +
     theme_bw() +
@@ -939,4 +1035,12 @@ renderPlot({
 
 ## References
 
-@RN5, @RN8, @RN6, @RN30, @RN11, @RN12, @RN4, @RN14, @RN15, @RN29, @RN19, @RN18, @RN17, @RN16, @RN20, @RN1, @RN21, @RN22, @RN23, @RN3, @RN24, @RN25, @RN26, @RN27, @RN28, and @RN2
+**Acknowledgments:**
+
+Many thanks to all of the beta-testers for VentmindeR. Special thanks to [Jay Rakkar](https://twitter.com/JayRakkar) and [Neil Munjal](https://twitter.com/NeilMunjal).
+
+VentmindeR was greatly facilitated by the information contained in [R for Data Science](https://r4ds.had.co.nz), [Mastering Shiny](https://mastering-shiny.org), [ggplot2: Elegant Graphics for Data Analysis](https://ggplot2-book.org), [Advanced R](https://adv-r.hadley.nz), and [R Markdown: The Definitive Guide](https://bookdown.org/yihui/rmarkdown/).
+
+**References:**
+
+@RN5, @RN8, @RN6, @RN30, @RN11, @RN12, @RN4, @RN14, @RN15, @RN29, @RN19, @RN18, @RN17, @RN16, @RN20, @RN1, @RN21, @RN22, @RN23, @RN3, @RN24, @RN31, @RN25, @RN26, @RN27, @RN28, and @RN2
