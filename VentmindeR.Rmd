@@ -159,9 +159,10 @@ output$rate_numeric <- renderText({
   paste("<br><br><span style=\"color:red\">WARNING: you entered at least one CO2 value that is not an integer. Was this intentional?</span>", sep = ""),
   paste("")
   )
-  out_negative_value_warning <- ifelse(input$current_pco2 < 0 | input$current_rate < 0 | input$desired_pco2 <0,
-                                       paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
-                                       paste(""))
+  out_negative_value_warning <- ifelse(input$current_pco2 < 0 | input$current_rate < 0 | input$desired_pco2 < 0,
+    paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
+    paste("")
+  )
   return(paste(out_result, out_rate_limit_warning, out_integer_warning, out_co2_integer_warning, out_negative_value_warning))
 })
 
@@ -308,12 +309,13 @@ output$rv_numeric <- renderText({
     paste("<br><br><span style=\"color:red\">WARNING: you have entered non-integer values. Is this intentional?</span>")
   )
   warning_negative_value <- ifelse(input$rv_current_pco2 < 0 |
-                                     input$rv_current_rate < 0 |
-                                     input$rv_current_tv < 0 |
-                                     input$rv_desired_pco2 |
-                                     input$rv_desired_numeric < 0,
-                                   paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
-                                       paste(""))
+    input$rv_current_rate < 0 |
+    input$rv_current_tv < 0 |
+    input$rv_desired_pco2 |
+    input$rv_desired_numeric < 0,
+  paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
+  paste("")
+  )
   return(paste(rv_result, warning_vt, warning_rate, warning_integer, warning_negative_value))
 })
 
@@ -515,20 +517,22 @@ output$warning_compliance <- renderText({
   )
   warning_compliance_integer <- ifelse(is.integer(input$cr_vt) & is.integer(input$cr_pip) & is.integer(input$cr_pplat) & is.integer(input$cr_peep),
     paste(""),
-    paste("<br><span style=\"color:red\">WARNING: you have entered non-integer values other than inspiratory time or height. Is this deliberate?</span>"))
-    warning_negative_value <- ifelse(input$cr_vt < 0 |
-                                     input$cr_pip < 0 |
-                                     input$cr_pplat < 0 |
-                                     input$cr_peep < 0 |
-                                     input$cr_itime < 0,
-                                   paste("<br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
-                                       paste(""))
-    warning_illogical_pressures <- case_when(
-      input$cr_pip < input$cr_pplat ~ "<br><span style=\"color:red\">WARNING: you entered a PIP less than plateau pressure. This is only possible in a patient with active inhalation. Please re-check your measurements.</span>",
-      input$cr_pplat <= input$cr_peep ~ "<br><span style=\"color:red\">WARNING: you entered a plateau pressure less than or equal to PEEP. Is your patient in CPAP? Please do not use this value, and re-check your measurements.</span>",
-      input$cr_pip <= input$cr_peep ~ "<br><span style=\"color:red\">WARNING: you entered a PIP less than or equal to PEEP. Is this intentonal? If so, it may imply that your patient is actively inhaling, and not receiving adequate ventilator support.</span>",
-      TRUE ~ paste("")
-    )
+    paste("<br><span style=\"color:red\">WARNING: you have entered non-integer values other than inspiratory time or height. Is this deliberate?</span>")
+  )
+  warning_negative_value <- ifelse(input$cr_vt < 0 |
+    input$cr_pip < 0 |
+    input$cr_pplat < 0 |
+    input$cr_peep < 0 |
+    input$cr_itime < 0,
+  paste("<br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
+  paste("")
+  )
+  warning_illogical_pressures <- case_when(
+    input$cr_pip < input$cr_pplat ~ "<br><span style=\"color:red\">WARNING: you entered a PIP less than plateau pressure. This is only possible in a patient with active inhalation. Please re-check your measurements.</span>",
+    input$cr_pplat <= input$cr_peep ~ "<br><span style=\"color:red\">WARNING: you entered a plateau pressure less than or equal to PEEP. Is your patient in CPAP? Please do not use this value, and re-check your measurements.</span>",
+    input$cr_pip <= input$cr_peep ~ "<br><span style=\"color:red\">WARNING: you entered a PIP less than or equal to PEEP. Is this intentonal? If so, it may imply that your patient is actively inhaling, and not receiving adequate ventilator support.</span>",
+    TRUE ~ paste("")
+  )
   return(paste(warning_compliance_height, warning_compliance_integer, warning_negative_value, warning_illogical_pressures))
 })
 
@@ -718,15 +722,16 @@ output$tc_warning <- renderText({
   }
 
   warning_negative_value <- ifelse(input$tc_v_1 < 0 |
-                                     input$tc_flow_1 < 0 |
-                                     input$tc_v_2 < 0 |
-                                     input$tc_flow_2 < 0 |
-                                     input$tc_v_3 < 0 |
-                                     input$tc_flow_3 < 0 |
-                                     input$tc_itime < 0,
-                                   paste("<br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
-                                       paste(""))
-  
+    input$tc_flow_1 < 0 |
+    input$tc_v_2 < 0 |
+    input$tc_flow_2 < 0 |
+    input$tc_v_3 < 0 |
+    input$tc_flow_3 < 0 |
+    input$tc_itime < 0,
+  paste("<br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
+  paste("")
+  )
+
   return(paste(out, warning_negative_value))
 })
 
@@ -946,14 +951,16 @@ numericInput(
 output$vd_vt <- renderText({
   vd_vt <- (input$vdvt_paco2 - input$vdvt_peco2) / input$vdvt_paco2
   vd_vt_numeric <- paste("The patient's Vd/Vt is: <b>", round(vd_vt, 2), "</b>.<br><br>Normal Vd/Vt in children was originally found to be approximately 0.33 ± 0.05 in the original 1976 Kerr study, but has been suggested to be lower in more recent studies.", sep = "")
-      warning_negative_value <- ifelse(input$vdvt_paco2 < 0 |
-                                     input$vdvt_peco2 < 0,
-                                   paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
-                                       paste(""))
-      warning_negative_vd_vt <- ifelse((input$vdvt_paco2 - input$vdvt_peco2) / input$vdvt_paco2 < 0,
-                                       paste("<br><br><span style=\"color:red\">WARNING: the calculated Vd/Vt is negative. While this is possible in special circumstances (Karnik et. al.), you should be skeptical of the result. Did you reverse PaCO2 and End Tidal CO2? </span>"),
-                                       paste(""))
-      return(paste(vd_vt_numeric,warning_negative_value,warning_negative_vd_vt))
+  warning_negative_value <- ifelse(input$vdvt_paco2 < 0 |
+    input$vdvt_peco2 < 0,
+  paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
+  paste("")
+  )
+  warning_negative_vd_vt <- ifelse((input$vdvt_paco2 - input$vdvt_peco2) / input$vdvt_paco2 < 0,
+    paste("<br><br><span style=\"color:red\">WARNING: the calculated Vd/Vt is negative. While this is possible in special circumstances (Karnik et. al.), you should be skeptical of the result. Did you reverse PaCO2 and End Tidal CO2? </span>"),
+    paste("")
+  )
+  return(paste(vd_vt_numeric, warning_negative_value, warning_negative_vd_vt))
 })
 
 htmlOutput("vd_vt")
@@ -1005,8 +1012,9 @@ selectInput(
 )
 
 output$oi_pao2_label <- renderText(ifelse(input$oi_desired == "P/F and OI",
-                                          paste("Current PaO2 (mmHg):"),
-                                          paste("Current SpO2 (%):")))
+  paste("Current PaO2 (mmHg):"),
+  paste("Current SpO2 (%):")
+))
 
 numericInput(
   inputId = "oi_pao2",
@@ -1026,22 +1034,22 @@ numericInput(
 output$pf_oi_calculation <- renderText({
   pf_ratio <- input$oi_pao2 / input$oi_fio2 * 100
   oi_index <- input$oi_fio2 * input$oi_map / input$oi_pao2
-  
+
   numeric_calculation <- case_when(
     input$oi_desired == "P/F and OI" ~ paste("The patient's P/F ratio is <b>", round(pf_ratio, 1), "</b>, and the patient's oxygenation index (OI) is <b>", round(oi_index, 1), "</b>.<br><br>PALICC defines pediatric ARDS as a P/F ratio <300 (mild), 100-199 (moderate), and <100 (severe) or an oxygnation index of ≥4 (mild), ≥8 (moderate), ≥16 (severe). The use of the oxygenation index is preferred.", sep = ""),
     input$oi_desired == "S/F and OSI" & input$oi_pao2 > 100 ~ paste("<span style=\"color:red\">WARNING: You have selected an oxygen saturation of >100%. This is not posible. Did you mean to enter a PaO2?</span>"),
     input$oi_desired == "S/F and OSI" & input$oi_pao2 == 100 ~ paste("<span style=\"color:red\">WARNING: You have selected an oxygen saturation of 100%. Is this actually your patient's oxygen saturation? If so, you should not attempt to calculate an an S/F ratio or OSI. It is impossible to infer a PaO2 from an SpO2 of 100% (e.g. both a PaO2 of 150 mmHg and 450 mmHg will result in an SpO2 of 100%). Did you mean to enter a PaO2?</span>"),
     input$oi_desired == "S/F and OSI" & input$oi_pao2 < 100 ~ paste("The patient's S/F ratio is <b>", round(pf_ratio, 1), "</b>, and the patient's oxygenation saturation index (OSI) is <b>", round(oi_index, 1), "</b>.<br><br>PALICC defines pediatric ARDS as an S/F ratio <264 or an oxygnation saturation index of ≥5 (mild), ≥7.5 (moderate), ≥12.3 (severe). The use of the oxygenation saturation index is preferred.", sep = "")
   )
-  
+
   integer_warning <- ifelse(is.integer(input$oi_fio2) & is.integer(input$oi_map) & is.integer(input$oi_peep) & is.integer(input$oi_pao2),
-                            paste(""),
-                            paste("<br><br><span style=\"color:red\">WARNING: you have entered non-integer values. Is this deliberate?"))
+    paste(""),
+    paste("<br><br><span style=\"color:red\">WARNING: you have entered non-integer values. Is this deliberate?")
+  )
   return(paste(numeric_calculation, integer_warning))
 })
 
 htmlOutput("pf_oi_calculation")
-
 ```
 
 ### Rationale and Equations {.white-box}
@@ -1180,23 +1188,34 @@ output$qp_qs_result <- renderText({
   carrying_capacity <- 1.34 * input$hgb * input$ao_sat / 100 + 0.003 * input$qp_qs_pao2
   numeric_result <- paste("The pulmonary to systemic blood flow ratio (Qp:Qs) is <b>", round(qp_qs, 2), " to 1</b>.<br>", "The patient's blood oxygen content is <b>", round(carrying_capacity, 2), " ml/dL</b>.", sep = "")
   integer_warning <- ifelse(is.integer(input$ao_sat) & is.integer(input$svc_sat) & is.integer(input$pv_sat) & is.integer(input$qp_qs_pao2),
-                            paste(""),
-                            paste("<br><br><span style=\"color:red\">WARNING: you have entered non-integer values other than hemoglobin. Is this deliberate?"))
-  pv_sat_warning <- case_when(input$pv_sat > 100 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a pulmonary venous oxygen saturation greater than 100%. This is not physiologically possible."),
-                              input$pv_sat < 90 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a pulmonary venous oxygen saturation less than 90%. Is this deliberate?"),
-                              TRUE ~ paste(""))
-  ao_sat_warning <- case_when(input$ao_sat > 100 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered an aortic oxygen saturation greater than 100%. This is not physiologically possible."),
-                              input$ao_sat < 60 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered an aortic oxygen saturation less than 60%. Is this deliberate?"),
-                              TRUE ~ paste(""))
-  svc_sat_warning <- case_when(input$svc_sat > 80 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a mixed venous aortic oxygen saturation greater than 80%. Is this deliberate?"),
-                              input$svc_sat < 40 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a mixed venous oxygen saturation less than 40%. Is this deliberate?"),
-                              TRUE ~ paste(""))
-  hgb_warning <- case_when(input$hgb > 20 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a hemoglobin greater than 20 mg/dl. Is this deliberate?"),
-                              input$hgb < 5 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered hemoglobin less than 5 mg/dl. Is this deliberate?"),
-                              TRUE ~ paste(""))
-    pao2_warning <- case_when(input$qp_qs_pao2 > 300 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a PaO2 greater than 300 mmHg. Is this deliberate?"),
-                              input$qp_qs_pao2 < 30 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a PaO2 less than 30 mmHg. Is this deliberate?"),
-                              TRUE ~ paste(""))
+    paste(""),
+    paste("<br><br><span style=\"color:red\">WARNING: you have entered non-integer values other than hemoglobin. Is this deliberate?")
+  )
+  pv_sat_warning <- case_when(
+    input$pv_sat > 100 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a pulmonary venous oxygen saturation greater than 100%. This is not physiologically possible."),
+    input$pv_sat < 90 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a pulmonary venous oxygen saturation less than 90%. Is this deliberate?"),
+    TRUE ~ paste("")
+  )
+  ao_sat_warning <- case_when(
+    input$ao_sat > 100 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered an aortic oxygen saturation greater than 100%. This is not physiologically possible."),
+    input$ao_sat < 60 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered an aortic oxygen saturation less than 60%. Is this deliberate?"),
+    TRUE ~ paste("")
+  )
+  svc_sat_warning <- case_when(
+    input$svc_sat > 80 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a mixed venous aortic oxygen saturation greater than 80%. Is this deliberate?"),
+    input$svc_sat < 40 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a mixed venous oxygen saturation less than 40%. Is this deliberate?"),
+    TRUE ~ paste("")
+  )
+  hgb_warning <- case_when(
+    input$hgb > 20 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a hemoglobin greater than 20 mg/dl. Is this deliberate?"),
+    input$hgb < 5 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered hemoglobin less than 5 mg/dl. Is this deliberate?"),
+    TRUE ~ paste("")
+  )
+  pao2_warning <- case_when(
+    input$qp_qs_pao2 > 300 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a PaO2 greater than 300 mmHg. Is this deliberate?"),
+    input$qp_qs_pao2 < 30 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a PaO2 less than 30 mmHg. Is this deliberate?"),
+    TRUE ~ paste("")
+  )
   return(paste(numeric_result, integer_warning, ao_sat_warning, svc_sat_warning, pv_sat_warning, hgb_warning, pao2_warning))
 })
 
