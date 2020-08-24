@@ -46,7 +46,7 @@ library(flextable)
 
 **Welcome:**
 
-Welcome to **VentmindeR** (version 2.2, updated 21 August, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
+Welcome to **VentmindeR** (version 2.3, updated 24 August, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
 
 **About Each Calculator:**
 
@@ -66,9 +66,15 @@ Welcome to **VentmindeR** (version 2.2, updated 21 August, 2020) a free, online,
 
 Medical tools should be free and transparent. The source code for this calculator is publicly available at: https://github.com/drjonpelly/VentmindeR. You are free to copy, modify, and/or distribute this code under two conditions: 1) the product you make is free for others to use (you don't sell it), and 2) you cite the original app (because I worked hard on it).
 
-**About the Author:**
+**About the Authors:**
 
-[Jonathan Pelletier](https://twitter.com/drjonpelly) is a fellow in Pediatric Critical Care Medicine. He has interests in data science and using machine learning to assist clinical decision making. When not slaving away at a computer, he enjoys cycling, hiking, and spending time with his family. 
+Medicine and modeling are team sports. The authors wish to acknowledge that the whole product is always greater than the sum of the parts.
+
+[Jonathan Pelletier](https://twitter.com/drjonpelly) is a Pediatric Critical Care Medicine Fellow and an NIH T32 Post-Doctoral Scholar at University of Pittsburgh Medical Center. His research interests include variability in clinical care, data science, and using machine learning to assist clinical decision making.
+
+[Neil Munjal](https://twitter.com/NeilMunjal) is a Pediatric Critical Care Medicine Fellow, a pediatric neurologist, and an NIH T32 Post-Doctoral Scholar at University of Pittsburgh Medical Center. His research interests include multi-modal real-time ICU monitoring, machine learning in medicine, causal modeling, and predictive analytics.
+
+[Jay Rakkar](https://twitter.com/JayRakkar) is a Pediatric Critical Care Medicine Fellow and an NIH T32 Post-Doctoral Scholar at University of Pittsburgh Medical Center. His research interests include pediatric brain injury and utilization of big data for clinical research, and developing electronic applications to optimize medical education and patient safety.
 
 **Plain Language Disclaimer:**
 
@@ -80,7 +86,7 @@ Be safe out there. What you do matters.
 
 **Legal Language Disclaimer:**
 
-In using VentmindeR online ventilator calculator, and its associated or services, you, the user, are acknowledging that you are a licensed healthcare professional with expertise in ventilator physiology and management. You further agree that any services provided are provided explicitly without warranty or guarantee of any kind, including guarantees of accuracy. VentmindeR does not provide medical advice, and its goods and services are not intended as medical recommendations. You agree to assume full responsibility for any personal injury, loss, or damages, to yourself and any parties related to medical decisions made after using VentmindeR. You further release and discharge VentmindeR, and its creators, from any injury, loss, or damage that results from using VentmindeR or its services, whether caused by the fault of yourself, VentmindeR, or other third parties. You agree to indemnify and defend VentmindeR, and its creators, against all claims, causes of action, damages, judgments, costs or expenses, including attorney fees and other litigation costs, which may in any way arise from your use of VentmindeR or its services.
+In using VentmindeR online ventilator calculator, and its associated services, you, the user, are acknowledging that you are a licensed healthcare professional with expertise in ventilator physiology and management. You further agree that any services provided are provided explicitly without warranty or guarantee of any kind, including guarantees of accuracy. VentmindeR does not provide medical advice, and its goods and services are not intended as medical recommendations. You agree to assume full responsibility for any personal injury, loss, or damages, to yourself and any parties related to medical decisions made after using VentmindeR. You further release and discharge VentmindeR, and its creators, from any injury, loss, or damage that results from using VentmindeR or its services, whether caused by the fault of yourself, VentmindeR, or other third parties. You agree to indemnify and defend VentmindeR, and its creators, against all claims, causes of action, damages, judgments, costs or expenses, including attorney fees and other litigation costs, which may in any way arise from your use of VentmindeR or its services.
 
 You acknowledge that you are under no pressure or duress to use VentmindeR or its services, and that you have been given a reasonable opportunity to review this agreement before using VentmindeR or its services. The invalidity or unenforceability of any provision of this agreement, whether standing alone or as applied to a particular occurrence or circumstance, shall not affect the validity or enforceability of any other provision of this agreement or of any other applications of such provision, as the case may be, and such invalid or unenforceable provision shall be deemed not to be a part of this agreement.
 
@@ -153,7 +159,10 @@ output$rate_numeric <- renderText({
   paste("<br><br><span style=\"color:red\">WARNING: you entered at least one CO2 value that is not an integer. Was this intentional?</span>", sep = ""),
   paste("")
   )
-  return(paste(out_result, out_rate_limit_warning, out_integer_warning, out_co2_integer_warning))
+  out_negative_value_warning <- ifelse(input$current_pco2 < 0 | input$current_rate < 0 | input$desired_pco2 <0,
+                                       paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
+                                       paste(""))
+  return(paste(out_result, out_rate_limit_warning, out_integer_warning, out_co2_integer_warning, out_negative_value_warning))
 })
 
 htmlOutput("rate_numeric")
@@ -298,7 +307,14 @@ output$rv_numeric <- renderText({
     paste(""),
     paste("<br><br><span style=\"color:red\">WARNING: you have entered non-integer values. Is this intentional?</span>")
   )
-  return(paste(rv_result, warning_vt, warning_rate, warning_integer))
+  warning_negative_value <- ifelse(input$rv_current_pco2 < 0 |
+                                     input$rv_current_rate < 0 |
+                                     input$rv_current_tv < 0 |
+                                     input$rv_desired_pco2 |
+                                     input$rv_desired_numeric < 0,
+                                   paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
+                                       paste(""))
+  return(paste(rv_result, warning_vt, warning_rate, warning_integer, warning_negative_value))
 })
 
 htmlOutput("rv_numeric")
@@ -488,20 +504,32 @@ numericInput(
 
 ### Description {.white-box}
 
-Below are the patient's calculated compliance, resistance, _inspiratory_ time constant and maximum safe respiratory rate **assuming** that the inspiratory and expiratory time constants are the same. **Please note** that this assumption may not be valid, especially in patients with obstructive physiology. An expiratory time constant calculation is recommended.
+Below are the patient's calculated compliance, resistance, _inspiratory_ time constant and maximum safe respiratory rate **assuming** that the inspiratory and expiratory time constants are the same. **Please note** that this assumption may not be valid, especially in patients with obstructive physiology. An _expiratory_ time constant calculation is **always** recommended.
 
 ```{r compliance_warning}
 output$warning_compliance <- renderText({
   warning_compliance_height <- case_when(
-    input$cr_height > 200 ~ paste("<span style=\"color:red\">WARNING: you chose a height of ", input$cr_height, " cm. The average height of adult males and females are 175 cm and 162 cm, respectively. Is this deliberate?</span>"),
-    input$cr_height < 40 ~ paste("<span style=\"color:red\">WARNING: you chose a height of ", input$cr_height, " cm. The average height of a term newborn is 50 cm. Is this deliberate?</span>"),
+    input$cr_height > 200 ~ paste("<span style=\"color:red\"><br>WARNING: you chose a height of ", input$cr_height, " cm. The average height of adult males and females are 175 cm and 162 cm, respectively. Is this deliberate?</span>"),
+    input$cr_height < 40 ~ paste("<span style=\"color:red\"><br>WARNING: you chose a height of ", input$cr_height, " cm. The average height of a term newborn is 50 cm. Is this deliberate?</span>"),
     TRUE ~ paste("")
   )
   warning_compliance_integer <- ifelse(is.integer(input$cr_vt) & is.integer(input$cr_pip) & is.integer(input$cr_pplat) & is.integer(input$cr_peep),
     paste(""),
-    paste("<br><br><span style=\"color:red\">WARNING: you have entered non-integer values other than inspiratory time or height. Is this deliberate?</span>")
-  )
-  return(paste(warning_compliance_height, warning_compliance_integer))
+    paste("<br><span style=\"color:red\">WARNING: you have entered non-integer values other than inspiratory time or height. Is this deliberate?</span>"))
+    warning_negative_value <- ifelse(input$cr_vt < 0 |
+                                     input$cr_pip < 0 |
+                                     input$cr_pplat < 0 |
+                                     input$cr_peep < 0 |
+                                     input$cr_itime < 0,
+                                   paste("<br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
+                                       paste(""))
+    warning_illogical_pressures <- case_when(
+      input$cr_pip < input$cr_pplat ~ "<br><span style=\"color:red\">WARNING: you entered a PIP less than plateau pressure. This is only possible in a patient with active inhalation. Please re-check your measurements.</span>",
+      input$cr_pplat <= input$cr_peep ~ "<br><span style=\"color:red\">WARNING: you entered a plateau pressure less than or equal to PEEP. Is your patient in CPAP? Please do not use this value, and re-check your measurements.</span>",
+      input$cr_pip <= input$cr_peep ~ "<br><span style=\"color:red\">WARNING: you entered a PIP less than or equal to PEEP. Is this intentonal? If so, it may imply that your patient is actively inhaling, and not receiving adequate ventilator support.</span>",
+      TRUE ~ paste("")
+    )
+  return(paste(warning_compliance_height, warning_compliance_integer, warning_negative_value, warning_illogical_pressures))
 })
 
 htmlOutput("warning_compliance")
@@ -679,16 +707,27 @@ output$tc_warning <- renderText({
   )))$adj.r.squared
 
   if (tc_regression_r_squared == 1) {
-    out <- paste("<br><span style=\"color:blue\">CAUTION: The regression line has a</span> <span class=\"rainbow\">perfect correlation</span><span style=\"color:blue\">. This is possible, but surprising, and you should be skeptical of the result. Did you measure on three separate breaths?</span>")
+    out <- paste("<br><span style=\"color:blue\">CAUTION: the regression line has a</span> <span class=\"rainbow\">perfect correlation</span><span style=\"color:blue\">. This is possible, but surprising, and you should be skeptical of the result. Did you measure on three separate breaths?</span>")
   }
 
   if (tc_regression_r_squared < 1 & tc_regression_r_squared > 0.8) {
     out <- paste("<br>The regression adjusted r^2 value is: ", round(tc_regression_r_squared, 3), ". This is likely acceptable.", sep = "")
   }
   if (tc_regression_r_squared < 0.8) {
-    out <- paste("<br><span style=\"color:red\">WARNING: The regression adjusted r^2 value is: ", round(tc_regression_r_squared, 23), ". This suggests a variable expiratory flow waveform. Possible explantions include secretions, active exhalation, or dynamic airway collapse.</span>", sep = "")
+    out <- paste("<br><span style=\"color:red\">WARNING: the regression adjusted r^2 value is: ", round(tc_regression_r_squared, 3), ". This suggests a variable expiratory flow waveform. Possible explantions include secretions, active exhalation, or dynamic airway collapse.</span>", sep = "")
   }
-  out
+
+  warning_negative_value <- ifelse(input$tc_v_1 < 0 |
+                                     input$tc_flow_1 < 0 |
+                                     input$tc_v_2 < 0 |
+                                     input$tc_flow_2 < 0 |
+                                     input$tc_v_3 < 0 |
+                                     input$tc_flow_3 < 0 |
+                                     input$tc_itime < 0,
+                                   paste("<br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
+                                       paste(""))
+  
+  return(paste(out, warning_negative_value))
 })
 
 htmlOutput("tc_warning")
@@ -906,7 +945,15 @@ numericInput(
 ```{r vd_vt_text}
 output$vd_vt <- renderText({
   vd_vt <- (input$vdvt_paco2 - input$vdvt_peco2) / input$vdvt_paco2
-  paste("The patient's Vd/Vt is: <b>", round(vd_vt, 2), "</b>.<br><br>Normal Vd/Vt in children was originally found to be approximately 0.33 ± 0.05 in the original 1976 Kerr study, but has been suggested to be lower in more recent studies.", sep = "")
+  vd_vt_numeric <- paste("The patient's Vd/Vt is: <b>", round(vd_vt, 2), "</b>.<br><br>Normal Vd/Vt in children was originally found to be approximately 0.33 ± 0.05 in the original 1976 Kerr study, but has been suggested to be lower in more recent studies.", sep = "")
+      warning_negative_value <- ifelse(input$vdvt_paco2 < 0 |
+                                     input$vdvt_peco2 < 0,
+                                   paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
+                                       paste(""))
+      warning_negative_vd_vt <- ifelse((input$vdvt_paco2 - input$vdvt_peco2) / input$vdvt_paco2 < 0,
+                                       paste("<br><br><span style=\"color:red\">WARNING: the calculated Vd/Vt is negative. While this is possible in special circumstances (Karnik et. al.), you should be skeptical of the result. Did you reverse PaCO2 and End Tidal CO2? </span>"),
+                                       paste(""))
+      return(paste(vd_vt_numeric,warning_negative_value,warning_negative_vd_vt))
 })
 
 htmlOutput("vd_vt")
@@ -982,7 +1029,8 @@ output$pf_oi_calculation <- renderText({
   
   numeric_calculation <- case_when(
     input$oi_desired == "P/F and OI" ~ paste("The patient's P/F ratio is <b>", round(pf_ratio, 1), "</b>, and the patient's oxygenation index (OI) is <b>", round(oi_index, 1), "</b>.<br><br>PALICC defines pediatric ARDS as a P/F ratio <300 (mild), 100-199 (moderate), and <100 (severe) or an oxygnation index of ≥4 (mild), ≥8 (moderate), ≥16 (severe). The use of the oxygenation index is preferred.", sep = ""),
-    input$oi_desired == "S/F and OSI" & input$oi_pao2 >= 100 ~ paste("<span style=\"color:red\">WARNING: You have selected an oxygen saturation of ≥100%. Thus, it is not possible to calculate an S/F ratio or OSI. Did you mean to enter a PaO2?</span>"),
+    input$oi_desired == "S/F and OSI" & input$oi_pao2 > 100 ~ paste("<span style=\"color:red\">WARNING: You have selected an oxygen saturation of >100%. This is not posible. Did you mean to enter a PaO2?</span>"),
+    input$oi_desired == "S/F and OSI" & input$oi_pao2 == 100 ~ paste("<span style=\"color:red\">WARNING: You have selected an oxygen saturation of 100%. Is this actually your patient's oxygen saturation? If so, you should not attempt to calculate an an S/F ratio or OSI. It is impossible to infer a PaO2 from an SpO2 of 100% (e.g. both a PaO2 of 150 mmHg and 450 mmHg will result in an SpO2 of 100%). Did you mean to enter a PaO2?</span>"),
     input$oi_desired == "S/F and OSI" & input$oi_pao2 < 100 ~ paste("The patient's S/F ratio is <b>", round(pf_ratio, 1), "</b>, and the patient's oxygenation saturation index (OSI) is <b>", round(oi_index, 1), "</b>.<br><br>PALICC defines pediatric ARDS as an S/F ratio <264 or an oxygnation saturation index of ≥5 (mild), ≥7.5 (moderate), ≥12.3 (severe). The use of the oxygenation saturation index is preferred.", sep = "")
   )
   
@@ -1305,10 +1353,10 @@ renderPlot({
 
 **Acknowledgments:**
 
-Many thanks to all of the beta-testers for VentmindeR. Special thanks to [Jay Rakkar](https://twitter.com/JayRakkar) and [Neil Munjal](https://twitter.com/NeilMunjal).
+Many thanks to all of the beta-testers for VentmindeR, the instructors of the University of Pittsburgh Medical Center Critical Care Medicine ventilator course, and all of our research mentors.
 
 VentmindeR was greatly facilitated by the information contained in [R for Data Science](https://r4ds.had.co.nz), [Mastering Shiny](https://mastering-shiny.org), [ggplot2: Elegant Graphics for Data Analysis](https://ggplot2-book.org), [Advanced R](https://adv-r.hadley.nz), and [R Markdown: The Definitive Guide](https://bookdown.org/yihui/rmarkdown/).
 
 **References:**
 
-@RN5, @RN8, @RN6, @RN30, @RN11, @RN12, @RN4, @RN14, @RN15, @RN29, @RN19, @RN18, @RN17, @RN16, @RN20, @RN1, @RN21, @RN22, @RN23, @RN3, @RN24, @RN31, @RN25, @RN26, @RN27, @RN28, and @RN2
+[@RN1; @RN11; @RN12; @RN14; @RN15; @RN16; @RN17; @RN18; @RN19; @RN2; @RN20; @RN21; @RN22; @RN23; @RN24; @RN25; @RN26; @RN27; @RN28; @RN29; @RN3; @RN30; @RN31; @RN32; @RN4; @RN5; @RN6; @RN8]
