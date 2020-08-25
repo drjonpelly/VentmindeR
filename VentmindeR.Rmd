@@ -70,11 +70,11 @@ Medical tools should be free and transparent. The source code for this calculato
 
 Medicine and modeling are team sports. The authors wish to acknowledge that the whole product is always greater than the sum of the parts.
 
-[Jonathan Pelletier](https://twitter.com/drjonpelly) is a Pediatric Critical Care Medicine Fellow and an NIH T32 Post-Doctoral Scholar at University of Pittsburgh Medical Center. His research interests include variability in clinical care, data science, and using machine learning to assist clinical decision making.
+[Jonathan Pelletier](https://twitter.com/drjonpelly) is a Pediatric Critical Care Medicine Fellow and an NIH T32 Post-Doctoral Scholar at the University of Pittsburgh His research interests include variability in clinical care, data science, and using machine learning to assist clinical decision making.
 
-[Neil Munjal](https://twitter.com/NeilMunjal) is a Pediatric Critical Care Medicine Fellow, a pediatric neurologist, and an NIH T32 Post-Doctoral Scholar at University of Pittsburgh Medical Center. His research interests include multi-modal real-time ICU monitoring, machine learning in medicine, causal modeling, and predictive analytics.
+[Neil Munjal](https://twitter.com/NeilMunjal) is a Pediatric Critical Care Medicine Fellow, a pediatric neurologist, and an NIH T32 Post-Doctoral Scholar at the University of Pittsburgh. His research interests include multi-modal real-time ICU monitoring, machine learning in medicine, causal modeling, and predictive analytics.
 
-[Jay Rakkar](https://twitter.com/JayRakkar) is a Pediatric Critical Care Medicine Fellow and an NIH T32 Post-Doctoral Scholar at University of Pittsburgh Medical Center. His research interests include pediatric brain injury and utilization of big data for clinical research, and developing electronic applications to optimize medical education and patient safety.
+[Jay Rakkar](https://twitter.com/JayRakkar) is a Pediatric Critical Care Medicine Fellow and an NIH T32 Post-Doctoral Scholar at the University of Pittsburgh. His research interests include pediatric brain injury and utilization of big data for clinical research, and developing electronic applications to optimize medical education and patient safety.
 
 **Plain Language Disclaimer:**
 
@@ -311,7 +311,7 @@ output$rv_numeric <- renderText({
   warning_negative_value <- ifelse(input$rv_current_pco2 < 0 |
     input$rv_current_rate < 0 |
     input$rv_current_tv < 0 |
-    input$rv_desired_pco2 |
+    input$rv_desired_pco2 < 0|
     input$rv_desired_numeric < 0,
   paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
   paste("")
