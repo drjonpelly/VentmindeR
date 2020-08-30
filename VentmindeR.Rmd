@@ -46,7 +46,7 @@ library(flextable)
 
 **Welcome:**
 
-Welcome to **VentmindeR** (version 2.3, updated 24 August, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
+Welcome to **VentmindeR** (version 2.4, updated 30 August, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
 
 **About Each Calculator:**
 
@@ -184,38 +184,41 @@ Please note that this relationship assumes that a patient's dead space fraction 
 ### Graph of pCO2 and Rate {.white-box}
 
 ```{r rate_output graphical}
-renderPlot({
-  current_pco2 <- input$current_pco2
-  current_rate <- input$current_rate
-  desired_pco2 <- input$desired_pco2
-  desired_rate <- current_pco2 * current_rate / desired_pco2
+renderCachedPlot(
+  {
+    current_pco2 <- input$current_pco2
+    current_rate <- input$current_rate
+    desired_pco2 <- input$desired_pco2
+    desired_rate <- current_pco2 * current_rate / desired_pco2
 
-  rate_curve_table <- tibble(seq(10, 40, 1)) %>%
-    rename(rate = `seq(10, 40, 1)`) %>%
-    mutate(co2 = current_pco2 * current_rate / rate)
+    rate_curve_table <- tibble(seq(10, 40, 1)) %>%
+      rename(rate = `seq(10, 40, 1)`) %>%
+      mutate(co2 = current_pco2 * current_rate / rate)
 
-  colors <- c(
-    "current" = "red",
-    "desired" = "blue",
-    "20" = "black",
-    "60" = "black"
-  )
-  tribble(
-    ~rate, ~co2, ~color_mapping, ~point_name,
-    current_rate, current_pco2, "red", "current",
-    desired_rate, desired_pco2, "blue", "desired",
-  ) %>%
-    ggplot(aes(x = rate, y = co2)) +
-    geom_point(aes(color = point_name)) +
-    geom_line(mapping = aes(rate, co2), data = rate_curve_table) +
-    scale_color_manual(values = colors) +
-    geom_label_repel(aes(label = point_name)) +
-    theme_bw() +
-    labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.", caption = "Wexler HR, Lok P.\nA simple formula for adjusting arterial carbon dioxide tension.\nCan Anaesth Soc J 1981;28(4):370-2.") +
-    xlab("Ventilator Rate (breaths/min)") +
-    ylab("Predicted pCO2 (mmHg)") +
-    theme(legend.position = "none", plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
-})
+    colors <- c(
+      "current" = "red",
+      "desired" = "blue",
+      "20" = "black",
+      "60" = "black"
+    )
+    tribble(
+      ~rate, ~co2, ~color_mapping, ~point_name,
+      current_rate, current_pco2, "red", "current",
+      desired_rate, desired_pco2, "blue", "desired",
+    ) %>%
+      ggplot(aes(x = rate, y = co2)) +
+      geom_point(aes(color = point_name)) +
+      geom_line(mapping = aes(rate, co2), data = rate_curve_table) +
+      scale_color_manual(values = colors) +
+      geom_label_repel(aes(label = point_name)) +
+      theme_bw() +
+      labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.", caption = "Wexler HR, Lok P.\nA simple formula for adjusting arterial carbon dioxide tension.\nCan Anaesth Soc J 1981;28(4):370-2.") +
+      xlab("Ventilator Rate (breaths/min)") +
+      ylab("Predicted pCO2 (mmHg)") +
+      theme(legend.position = "none", plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+  },
+  cacheKeyExpr = list(input$current_pco2, input$current_rate, input$desired_pco2)
+)
 
 rm(colors, current_pco2, current_rate, desired_pco2, desired_rate, rate_curve_table)
 ```
@@ -311,7 +314,7 @@ output$rv_numeric <- renderText({
   warning_negative_value <- ifelse(input$rv_current_pco2 < 0 |
     input$rv_current_rate < 0 |
     input$rv_current_tv < 0 |
-    input$rv_desired_pco2 < 0|
+    input$rv_desired_pco2 < 0 |
     input$rv_desired_numeric < 0,
   paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
   paste("")
@@ -341,110 +344,116 @@ $Rate_{Desired}*TidalVolume_{Desired}*pCO2_{Desired}$
 ### Graph of pCO2 and Minute Ventilation {.white-box}
 
 ```{r show_rv_plot}
-renderPlot({
-  current_mv <- input$rv_current_rate * input$rv_current_tv
-  desired_mv <- input$rv_current_rate * input$rv_current_tv * input$rv_current_pco2 / input$rv_desired_pco2
-  current_pco2 <- input$rv_current_pco2
-  desired_pco2 <- input$rv_desired_pco2
+renderCachedPlot(
+  {
+    current_mv <- input$rv_current_rate * input$rv_current_tv
+    desired_mv <- input$rv_current_rate * input$rv_current_tv * input$rv_current_pco2 / input$rv_desired_pco2
+    current_pco2 <- input$rv_current_pco2
+    desired_pco2 <- input$rv_desired_pco2
 
-  mv_curve_table <- tibble(seq(50, 300, 1)) %>%
-    rename(minute_ventilation = `seq(50, 300, 1)`) %>%
-    mutate(pco2 = current_mv * current_pco2 / minute_ventilation)
+    mv_curve_table <- tibble(seq(50, 300, 1)) %>%
+      rename(minute_ventilation = `seq(50, 300, 1)`) %>%
+      mutate(pco2 = current_mv * current_pco2 / minute_ventilation)
 
-  colors <- c(
-    "current" = "red",
-    "desired" = "blue"
-  )
+    colors <- c(
+      "current" = "red",
+      "desired" = "blue"
+    )
 
-  tribble(
-    ~minute_ventilation, ~pco2, ~point_name,
-    current_mv, input$rv_current_pco2, "current",
-    desired_mv, input$rv_desired_pco2, "desired"
-  ) %>%
-    ggplot(aes(x = minute_ventilation, y = pco2)) +
-    geom_line(aes(minute_ventilation, pco2), data = mv_curve_table) +
-    geom_point(aes(color = point_name)) +
-    scale_color_manual(values = colors) +
-    geom_label_repel(aes(label = point_name)) +
-    theme_bw() +
-    labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.", caption = "Wexler HR, Lok P.\nA simple formula for adjusting arterial carbon dioxide tension.\nCan Anaesth Soc J 1981;28(4):370-2.") +
-    xlab("Minute Ventilation (ml/kg/min)") +
-    ylab("Predicted pCO2 (mmHg)") +
-    theme(legend.position = "none", plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
-})
+    tribble(
+      ~minute_ventilation, ~pco2, ~point_name,
+      current_mv, input$rv_current_pco2, "current",
+      desired_mv, input$rv_desired_pco2, "desired"
+    ) %>%
+      ggplot(aes(x = minute_ventilation, y = pco2)) +
+      geom_line(aes(minute_ventilation, pco2), data = mv_curve_table) +
+      geom_point(aes(color = point_name)) +
+      scale_color_manual(values = colors) +
+      geom_label_repel(aes(label = point_name)) +
+      theme_bw() +
+      labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.", caption = "Wexler HR, Lok P.\nA simple formula for adjusting arterial carbon dioxide tension.\nCan Anaesth Soc J 1981;28(4):370-2.") +
+      xlab("Minute Ventilation (ml/kg/min)") +
+      ylab("Predicted pCO2 (mmHg)") +
+      theme(legend.position = "none", plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+  },
+  cacheKeyExpr = list(input$rv_current_rate, input$rv_current_tv, input$rv_current_pco2, input$rv_desired_pco2)
+)
 ```
 
 ### Graph of pCO2 and Rate Stratified by Tidal Volume {.white-box}
 
 ```{r show_rate_by_vt_plot}
-renderPlot({
-  if (input$rv_desired_set == "Set Tidal Volume") {
-    current_pco2 <- input$rv_current_pco2
-    current_rate <- input$rv_current_rate
-    current_vt <- input$rv_current_tv
-    current_mv <- current_vt * current_rate
-    desired_pco2 <- input$rv_desired_pco2
-    desired_vt <- input$rv_desired_numeric
+renderCachedPlot(
+  {
+    if (input$rv_desired_set == "Set Tidal Volume") {
+      current_pco2 <- input$rv_current_pco2
+      current_rate <- input$rv_current_rate
+      current_vt <- input$rv_current_tv
+      current_mv <- current_vt * current_rate
+      desired_pco2 <- input$rv_desired_pco2
+      desired_vt <- input$rv_desired_numeric
 
-    desired_rate <- current_rate * current_vt * current_pco2 / desired_pco2 / desired_vt
+      desired_rate <- current_rate * current_vt * current_pco2 / desired_pco2 / desired_vt
 
-    rate_by_vt_curve_table <- tibble(rep(seq(10, 40, 1), 4)) %>%
-      rename(rate = `rep(seq(10, 40, 1), 4)`) %>%
-      mutate(volume = c(rep(4, 31), rep(6, 31), rep(8, 31), rep(10, 31))) %>%
-      mutate(minute_ventilation = rate * volume) %>%
-      mutate(pco2 = current_mv * current_pco2 / minute_ventilation) %>%
-      mutate(`Tidal Volume (ml/kg)` = factor(volume))
+      rate_by_vt_curve_table <- tibble(rep(seq(10, 40, 1), 4)) %>%
+        rename(rate = `rep(seq(10, 40, 1), 4)`) %>%
+        mutate(volume = c(rep(4, 31), rep(6, 31), rep(8, 31), rep(10, 31))) %>%
+        mutate(minute_ventilation = rate * volume) %>%
+        mutate(pco2 = current_mv * current_pco2 / minute_ventilation) %>%
+        mutate(`Tidal Volume (ml/kg)` = factor(volume))
 
-    rate_by_vol_graph <- tribble(
-      ~rate, ~pco2, ~point_name,
-      current_rate, current_pco2, "current",
-      desired_rate, desired_pco2, "desired",
-    ) %>%
-      ggplot(aes(rate, pco2)) +
-      geom_line(aes(rate, pco2, lty = `Tidal Volume (ml/kg)`), data = rate_by_vt_curve_table) +
-      geom_point(color = c("red", "blue")) +
-      geom_label_repel(aes(label = point_name)) +
-      xlab("Rate (breaths/min)") +
-      ylab("Predicted pCO2 (mmHg)") +
-      theme_bw() +
-      theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
-      labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.", caption = "Wexler HR, Lok P.\nA simple formula for adjusting arterial carbon dioxide tension.\nCan Anaesth Soc J 1981;28(4):370-2.")
-  }
+      rate_by_vol_graph <- tribble(
+        ~rate, ~pco2, ~point_name,
+        current_rate, current_pco2, "current",
+        desired_rate, desired_pco2, "desired",
+      ) %>%
+        ggplot(aes(rate, pco2)) +
+        geom_line(aes(rate, pco2, lty = `Tidal Volume (ml/kg)`), data = rate_by_vt_curve_table) +
+        geom_point(color = c("red", "blue")) +
+        geom_label_repel(aes(label = point_name)) +
+        xlab("Rate (breaths/min)") +
+        ylab("Predicted pCO2 (mmHg)") +
+        theme_bw() +
+        theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+        labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.", caption = "Wexler HR, Lok P.\nA simple formula for adjusting arterial carbon dioxide tension.\nCan Anaesth Soc J 1981;28(4):370-2.")
+    }
 
-  if (input$rv_desired_set == "Set Rate") {
-    current_pco2 <- input$rv_current_pco2
-    current_rate <- input$rv_current_rate
-    current_vt <- input$rv_current_tv
-    current_mv <- current_vt * current_rate
-    desired_pco2 <- input$rv_desired_pco2
-    desired_rate <- input$rv_desired_numeric
+    if (input$rv_desired_set == "Set Rate") {
+      current_pco2 <- input$rv_current_pco2
+      current_rate <- input$rv_current_rate
+      current_vt <- input$rv_current_tv
+      current_mv <- current_vt * current_rate
+      desired_pco2 <- input$rv_desired_pco2
+      desired_rate <- input$rv_desired_numeric
 
-    desired_vt <- current_rate * current_vt * current_pco2 / desired_pco2 / desired_rate
+      desired_vt <- current_rate * current_vt * current_pco2 / desired_pco2 / desired_rate
 
-    rate_by_vt_curve_table <- tibble(rep(seq(10, 40, 1), 4)) %>%
-      rename(rate = `rep(seq(10, 40, 1), 4)`) %>%
-      mutate(volume = c(rep(4, 31), rep(6, 31), rep(8, 31), rep(10, 31))) %>%
-      mutate(minute_ventilation = rate * volume) %>%
-      mutate(pco2 = current_mv * current_pco2 / minute_ventilation) %>%
-      mutate(`Tidal Volume (ml/kg)` = factor(volume))
+      rate_by_vt_curve_table <- tibble(rep(seq(10, 40, 1), 4)) %>%
+        rename(rate = `rep(seq(10, 40, 1), 4)`) %>%
+        mutate(volume = c(rep(4, 31), rep(6, 31), rep(8, 31), rep(10, 31))) %>%
+        mutate(minute_ventilation = rate * volume) %>%
+        mutate(pco2 = current_mv * current_pco2 / minute_ventilation) %>%
+        mutate(`Tidal Volume (ml/kg)` = factor(volume))
 
-    rate_by_vol_graph <- tribble(
-      ~rate, ~pco2, ~point_name,
-      current_rate, current_pco2, "current",
-      desired_rate, desired_pco2, "desired",
-    ) %>%
-      ggplot(aes(rate, pco2)) +
-      geom_line(aes(rate, pco2, lty = `Tidal Volume (ml/kg)`), data = rate_by_vt_curve_table) +
-      geom_point(color = c("red", "blue")) +
-      geom_label_repel(aes(label = point_name)) +
-      xlab("Rate (breaths/min)") +
-      ylab("Predicted pCO2 (mmHg)") +
-      theme_bw() +
-      theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
-      labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.", caption = "Wexler HR, Lok P.\nA simple formula for adjusting arterial carbon dioxide tension.\nCan Anaesth Soc J 1981;28(4):370-2.")
-  }
-  rate_by_vol_graph
-})
+      rate_by_vol_graph <- tribble(
+        ~rate, ~pco2, ~point_name,
+        current_rate, current_pco2, "current",
+        desired_rate, desired_pco2, "desired",
+      ) %>%
+        ggplot(aes(rate, pco2)) +
+        geom_line(aes(rate, pco2, lty = `Tidal Volume (ml/kg)`), data = rate_by_vt_curve_table) +
+        geom_point(color = c("red", "blue")) +
+        geom_label_repel(aes(label = point_name)) +
+        xlab("Rate (breaths/min)") +
+        ylab("Predicted pCO2 (mmHg)") +
+        theme_bw() +
+        theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+        labs(title = "Current and Predicted CO2", subtitle = "Note: this relationship assumes no change to Vd/Vt.", caption = "Wexler HR, Lok P.\nA simple formula for adjusting arterial carbon dioxide tension.\nCan Anaesth Soc J 1981;28(4):370-2.")
+    }
+    rate_by_vol_graph
+  },
+  cacheKeyExpr = list(input$rv_current_pco2, input$rv_current_rate, input$rv_current_tv, input$rv_desired_pco2, input$rv_desired_numeric)
+)
 ```
 
 # Compliance & Resistance
@@ -575,50 +584,57 @@ $Maximum Safe Respiratory Rate=\frac{60}{3\tau+iTime}$
 ### Compliance
 
 ```{r compliance_curve}
-renderPlot({
-  pt_compliance <- input$cr_vt / (input$cr_pplat - input$cr_peep)
-  pt_height <- input$cr_height
+renderCachedPlot(
+  {
+    pt_compliance <- input$cr_vt / (input$cr_pplat - input$cr_peep)
+    pt_height <- input$cr_height
 
-  tibble(height_m = seq(0.6, 2, 0.05)) %>%
-    mutate(boys = exp(1.592 * log(height_m) + 2.927)) %>%
-    mutate(girls = exp(2.039 * log(height_m) + 2.858)) %>%
-    mutate(height_cm = height_m * 100) %>%
-    pivot_longer(cols = c(girls, boys)) %>%
-    ggplot(aes(x = height_cm, y = value, lty = factor(name))) +
-    geom_line() +
-    geom_point(aes(pt_height, pt_compliance), color = "blue") +
-    geom_label(aes(x = pt_height, y = pt_compliance), label = "patient", color = "blue", nudge_x = -0.1, nudge_y = 2) +
-    theme_bw() +
-    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.title = element_blank()) +
-    labs(title = "Patient Compliance Vs. Normal Compliance Curves", subtitle = "The Normal Compliance Curves are Shown in Black", caption = "Lanteri CJ, Sly PD.\nChanges in respiratory mechanics with age.\nJ Appl Physiol (1985) 1993;74(1):369-78.") +
-    xlab("Height (cm)") +
-    ylab("Static Compliance (ml/cmH2O)")
-})
+    tibble(height_m = seq(0.6, 2, 0.05)) %>%
+      mutate(boys = exp(1.592 * log(height_m) + 2.927)) %>%
+      mutate(girls = exp(2.039 * log(height_m) + 2.858)) %>%
+      mutate(height_cm = height_m * 100) %>%
+      pivot_longer(cols = c(girls, boys)) %>%
+      ggplot(aes(x = height_cm, y = value, lty = factor(name))) +
+      geom_line() +
+      geom_point(aes(pt_height, pt_compliance), color = "blue") +
+      geom_label(aes(x = pt_height, y = pt_compliance), label = "patient", color = "blue", nudge_x = -0.1, nudge_y = 2) +
+      theme_bw() +
+      theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.title = element_blank()) +
+      labs(title = "Patient Compliance Vs. Normal Compliance Curves", subtitle = "The Normal Compliance Curves are Shown in Black", caption = "Lanteri CJ, Sly PD.\nChanges in respiratory mechanics with age.\nJ Appl Physiol (1985) 1993;74(1):369-78.") +
+      xlab("Height (cm)") +
+      ylab("Static Compliance (ml/cmH2O)")
+  },
+  cacheKeyExpr = list(input$cr_vt, input$cr_pplat, input$cr_peep, input$cr_height)
+)
 ```
 
 ### Resistance
 
 ```{r resistance_curve}
-renderPlot({
-  pt_resistance <- (input$cr_pip - input$cr_pplat) / (input$cr_vt / 1000 / input$cr_itime)
-  pt_height <- input$cr_height
+renderCachedPlot(
+  {
+    pt_resistance <- (input$cr_pip - input$cr_pplat) / (input$cr_vt / 1000 / input$cr_itime)
+    pt_height <- input$cr_height
 
-  tibble(height_m = seq(0.6, 2, 0.05)) %>%
-    mutate(boys = exp(-1.560 * log(height_m) + 3.504)) %>%
-    mutate(girls = exp(-1.834 * log(height_m) + 3.607)) %>%
-    mutate(height_cm = height_m * 100) %>%
-    pivot_longer(cols = c(girls, boys)) %>%
-    ggplot(aes(x = height_cm, y = value, lty = factor(name))) +
-    geom_line() +
-    geom_point(aes(pt_height, pt_resistance), color = "red") +
-    geom_label(aes(x = pt_height, y = pt_resistance), label = "patient", color = "red", nudge_x = -0.1, nudge_y = 3) +
-    theme_bw() +
-    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.title = element_blank()) +
-    labs(title = "Patient Resistance Vs. Normal Resistance Curves", subtitle = "The Normal Respiratory System Resistance Curves are Shown in Black", caption = "Lanteri CJ, Sly PD.\nChanges in respiratory mechanics with age.\nJ Appl Physiol (1985) 1993;74(1):369-78.") +
-    xlab("Height (cm)") +
-    ylab("System Resistance (cmH2O*seconds/l)")
-})
+    tibble(height_m = seq(0.6, 2, 0.05)) %>%
+      mutate(boys = exp(-1.560 * log(height_m) + 3.504)) %>%
+      mutate(girls = exp(-1.834 * log(height_m) + 3.607)) %>%
+      mutate(height_cm = height_m * 100) %>%
+      pivot_longer(cols = c(girls, boys)) %>%
+      ggplot(aes(x = height_cm, y = value, lty = factor(name))) +
+      geom_line() +
+      geom_point(aes(pt_height, pt_resistance), color = "red") +
+      geom_label(aes(x = pt_height, y = pt_resistance), label = "patient", color = "red", nudge_x = -0.1, nudge_y = 3) +
+      theme_bw() +
+      theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5), legend.title = element_blank()) +
+      labs(title = "Patient Resistance Vs. Normal Resistance Curves", subtitle = "The Normal Respiratory System Resistance Curves are Shown in Black", caption = "Lanteri CJ, Sly PD.\nChanges in respiratory mechanics with age.\nJ Appl Physiol (1985) 1993;74(1):369-78.") +
+      xlab("Height (cm)") +
+      ylab("System Resistance (cmH2O*seconds/l)")
+  },
+  cacheKeyExpr = list(input$cr_height, input$cr_vt, input$cr_pplat, input$cr_peep)
+)
 ```
+
 
 # Time Constant
 
@@ -797,127 +813,136 @@ $\frac{-Volume}{Flow}=Resistance*Compliance=TimeConstant(\tau)$
 ### Time Constant Regression Line
 
 ```{r tc_regression_plot}
-renderPlot({
-  vol_1 <- input$tc_v_1
-  flow_1 <- input$tc_flow_1
-  vol_2 <- input$tc_v_2
-  flow_2 <- input$tc_flow_2
-  vol_3 <- input$tc_v_3
-  flow_3 <- input$tc_flow_3
-  tc_itime <- input$tc_itime
+renderCachedPlot(
+  {
+    vol_1 <- input$tc_v_1
+    flow_1 <- input$tc_flow_1
+    vol_2 <- input$tc_v_2
+    flow_2 <- input$tc_flow_2
+    vol_3 <- input$tc_v_3
+    flow_3 <- input$tc_flow_3
+    tc_itime <- input$tc_itime
 
-  tc_1 <- (vol_1 / 1000) / (flow_1 / 60)
-  tc_2 <- (vol_2 / 1000) / (flow_2 / 60)
-  tc_3 <- (vol_3 / 1000) / (flow_3 / 60)
+    tc_1 <- (vol_1 / 1000) / (flow_1 / 60)
+    tc_2 <- (vol_2 / 1000) / (flow_2 / 60)
+    tc_3 <- (vol_3 / 1000) / (flow_3 / 60)
 
-  tc_regression_est <- summary(lm(tribble(
-    ~Volume_l, ~Flow_l_sec,
-    vol_1 / 1000, flow_1 / 60,
-    vol_2 / 1000, flow_2 / 60,
-    vol_3 / 1000, flow_3 / 60,
-  )))$coefficients[2, 1]
+    tc_regression_est <- summary(lm(tribble(
+      ~Volume_l, ~Flow_l_sec,
+      vol_1 / 1000, flow_1 / 60,
+      vol_2 / 1000, flow_2 / 60,
+      vol_3 / 1000, flow_3 / 60,
+    )))$coefficients[2, 1]
 
-  tc_regression_r_squared <- summary(lm(tribble(
-    ~Volume_l, ~Flow_l_sec,
-    vol_1 / 1000, flow_1 / 60,
-    vol_2 / 1000, flow_2 / 60,
-    vol_3 / 1000, flow_3 / 60,
-  )))$adj.r.squared
+    tc_regression_r_squared <- summary(lm(tribble(
+      ~Volume_l, ~Flow_l_sec,
+      vol_1 / 1000, flow_1 / 60,
+      vol_2 / 1000, flow_2 / 60,
+      vol_3 / 1000, flow_3 / 60,
+    )))$adj.r.squared
 
-  tribble(
-    ~Volume_l, ~Flow_l_sec, ~label,
-    vol_1 / 1000, flow_1 / 60, "point #1",
-    vol_2 / 1000, flow_2 / 60, "point #2",
-    vol_3 / 1000, flow_3 / 60, "point #3"
-  ) %>%
-    ggplot(aes(Volume_l, Flow_l_sec)) +
-    geom_point() +
-    geom_smooth(method = "lm", color = "black", se = FALSE, lty = 2) +
-    theme_bw() +
-    labs(title = "Regression for Time Constant", subtitle = paste("The Estimated Time Constant is: ", round(tc_regression_est, 2), " seconds, with an r^2 of: ", round(tc_regression_r_squared, 2), ".\nThe slope of the line shown is the time constant.", sep = ""), caption = "Please note that this graph expresses volume in liters and\nflow in liters per second to yield a time constant in seconds.") +
-    xlab("Volume Remaining (liters)") +
-    ylab("Flow (liters/second)") +
-    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
-    ggrepel::geom_label_repel(aes(label = label))
-})
+    tribble(
+      ~Volume_l, ~Flow_l_sec, ~label,
+      vol_1 / 1000, flow_1 / 60, "point #1",
+      vol_2 / 1000, flow_2 / 60, "point #2",
+      vol_3 / 1000, flow_3 / 60, "point #3"
+    ) %>%
+      ggplot(aes(Volume_l, Flow_l_sec)) +
+      geom_point() +
+      geom_smooth(method = "lm", color = "black", se = FALSE, lty = 2) +
+      theme_bw() +
+      labs(title = "Regression for Time Constant", subtitle = paste("The Estimated Time Constant is: ", round(tc_regression_est, 2), " seconds, with an r^2 of: ", round(tc_regression_r_squared, 2), ".\nThe slope of the line shown is the time constant.", sep = ""), caption = "Please note that this graph expresses volume in liters and\nflow in liters per second to yield a time constant in seconds.") +
+      xlab("Volume Remaining (liters)") +
+      ylab("Flow (liters/second)") +
+      theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+      ggrepel::geom_label_repel(aes(label = label))
+  },
+  cacheKeyExpr = list(input$tc_v_1, input$tc_flow_1, input$tc_v_2, input$tc_flow_2, input$tc_v_3, input$tc_flow_3, input$tc_itime)
+)
 ```
 
 ### Graph of Exhalation over Time {.white-box}
 
 ```{r exhale_graph}
-renderPlot({
-  vol_1 <- input$tc_v_1
-  flow_1 <- input$tc_flow_1
-  vol_2 <- input$tc_v_2
-  flow_2 <- input$tc_flow_2
-  vol_3 <- input$tc_v_3
-  flow_3 <- input$tc_flow_3
-  tc_itime <- input$tc_itime
+renderCachedPlot(
+  {
+    vol_1 <- input$tc_v_1
+    flow_1 <- input$tc_flow_1
+    vol_2 <- input$tc_v_2
+    flow_2 <- input$tc_flow_2
+    vol_3 <- input$tc_v_3
+    flow_3 <- input$tc_flow_3
+    tc_itime <- input$tc_itime
 
-  tc_1 <- (vol_1 / 1000) / (flow_1 / 60)
-  tc_2 <- (vol_2 / 1000) / (flow_2 / 60)
-  tc_3 <- (vol_3 / 1000) / (flow_3 / 60)
+    tc_1 <- (vol_1 / 1000) / (flow_1 / 60)
+    tc_2 <- (vol_2 / 1000) / (flow_2 / 60)
+    tc_3 <- (vol_3 / 1000) / (flow_3 / 60)
 
-  tc <- summary(lm(tribble(
-    ~Volume_l, ~Flow_l_sec,
-    vol_1 / 1000, flow_1 / 60,
-    vol_2 / 1000, flow_2 / 60,
-    vol_3 / 1000, flow_3 / 60,
-  )))$coefficients[2, 1]
+    tc <- summary(lm(tribble(
+      ~Volume_l, ~Flow_l_sec,
+      vol_1 / 1000, flow_1 / 60,
+      vol_2 / 1000, flow_2 / 60,
+      vol_3 / 1000, flow_3 / 60,
+    )))$coefficients[2, 1]
 
-  tibble(time = seq(0, 10, 0.05)) %>%
-    mutate(remaining = exp(-time / tc)) %>%
-    ggplot(aes(time, remaining * 100)) +
-    geom_line() +
-    geom_vline(aes(xintercept = tc * 3), lty = 2, color = "red") +
-    geom_vline(aes(xintercept = tc), lty = 2, color = "blue") +
-    geom_label(aes(tc * 3 + 0.6, 25), label = paste(round(tc * 3, 2), "seconds\n3 Time Constants\n95% Vt Exhaled"), color = "red") +
-    geom_label(aes(tc + 0.6, 75), label = paste(round(tc, 2), "seconds\n1 Time Constant\n37% Vt Exhaled"), color = "blue") +
-    theme_bw() +
-    theme(plot.title = element_text(hjust = 0.5)) +
-    labs(title = "Percent of Tidal Volume Exhaled over Time") +
-    ylab("% of Tidal Volume Remaining") +
-    scale_x_continuous(breaks = seq(0, 10, 2), name = "Exhale Time (seconds)")
-})
+    tibble(time = seq(0, 10, 0.05)) %>%
+      mutate(remaining = exp(-time / tc)) %>%
+      ggplot(aes(time, remaining * 100)) +
+      geom_line() +
+      geom_vline(aes(xintercept = tc * 3), lty = 2, color = "red") +
+      geom_vline(aes(xintercept = tc), lty = 2, color = "blue") +
+      geom_label(aes(tc * 3 + 0.6, 25), label = paste(round(tc * 3, 2), "seconds\n3 Time Constants\n95% Vt Exhaled"), color = "red") +
+      geom_label(aes(tc + 0.6, 75), label = paste(round(tc, 2), "seconds\n1 Time Constant\n37% Vt Exhaled"), color = "blue") +
+      theme_bw() +
+      theme(plot.title = element_text(hjust = 0.5)) +
+      labs(title = "Percent of Tidal Volume Exhaled over Time") +
+      ylab("% of Tidal Volume Remaining") +
+      scale_x_continuous(breaks = seq(0, 10, 2), name = "Exhale Time (seconds)")
+  },
+  cacheKeyExpr = list(input$tc_itime, input$tc_v_1, input$tc_flow_1, input$tc_v_2, input$tc_flow_2, input$tc_v_3, input$tc_flow_3)
+)
 ```
 
 ### Graph of Exhalation over Time {.white-box .mobile}
 
 ```{r exhale_graph_mobile}
-renderPlot({
-  vol_1 <- input$tc_v_1
-  flow_1 <- input$tc_flow_1
-  vol_2 <- input$tc_v_2
-  flow_2 <- input$tc_flow_2
-  vol_3 <- input$tc_v_3
-  flow_3 <- input$tc_flow_3
-  tc_itime <- input$tc_itime
+renderCachedPlot(
+  {
+    vol_1 <- input$tc_v_1
+    flow_1 <- input$tc_flow_1
+    vol_2 <- input$tc_v_2
+    flow_2 <- input$tc_flow_2
+    vol_3 <- input$tc_v_3
+    flow_3 <- input$tc_flow_3
+    tc_itime <- input$tc_itime
 
-  tc_1 <- (vol_1 / 1000) / (flow_1 / 60)
-  tc_2 <- (vol_2 / 1000) / (flow_2 / 60)
-  tc_3 <- (vol_3 / 1000) / (flow_3 / 60)
+    tc_1 <- (vol_1 / 1000) / (flow_1 / 60)
+    tc_2 <- (vol_2 / 1000) / (flow_2 / 60)
+    tc_3 <- (vol_3 / 1000) / (flow_3 / 60)
 
-  tc <- summary(lm(tribble(
-    ~Volume_l, ~Flow_l_sec,
-    vol_1 / 1000, flow_1 / 60,
-    vol_2 / 1000, flow_2 / 60,
-    vol_3 / 1000, flow_3 / 60,
-  )))$coefficients[2, 1]
+    tc <- summary(lm(tribble(
+      ~Volume_l, ~Flow_l_sec,
+      vol_1 / 1000, flow_1 / 60,
+      vol_2 / 1000, flow_2 / 60,
+      vol_3 / 1000, flow_3 / 60,
+    )))$coefficients[2, 1]
 
-  tibble(time = seq(0, 10, 0.05)) %>%
-    mutate(remaining = exp(-time / tc)) %>%
-    ggplot(aes(time, remaining * 100)) +
-    geom_line() +
-    geom_vline(aes(xintercept = tc * 3), lty = 2, color = "red") +
-    geom_vline(aes(xintercept = tc), lty = 2, color = "blue") +
-    geom_label(aes(tc * 3 + 1.7, 25), label = paste(round(tc * 3, 2), "seconds\n3 Time Constants\n95% Vt Exhaled"), color = "red") +
-    geom_label(aes(tc + 1.7, 75), label = paste(round(tc, 2), "seconds\n1 Time Constant\n37% Vt Exhaled"), color = "blue") +
-    theme_bw() +
-    theme(plot.title = element_text(hjust = 0.5)) +
-    labs(title = "Percent of Tidal Volume Exhaled over Time") +
-    ylab("% of Tidal Volume Remaining") +
-    scale_x_continuous(breaks = seq(0, 10, 2), name = "Exhale Time (seconds)")
-})
+    tibble(time = seq(0, 10, 0.05)) %>%
+      mutate(remaining = exp(-time / tc)) %>%
+      ggplot(aes(time, remaining * 100)) +
+      geom_line() +
+      geom_vline(aes(xintercept = tc * 3), lty = 2, color = "red") +
+      geom_vline(aes(xintercept = tc), lty = 2, color = "blue") +
+      geom_label(aes(tc * 3 + 1.7, 25), label = paste(round(tc * 3, 2), "seconds\n3 Time Constants\n95% Vt Exhaled"), color = "red") +
+      geom_label(aes(tc + 1.7, 75), label = paste(round(tc, 2), "seconds\n1 Time Constant\n37% Vt Exhaled"), color = "blue") +
+      theme_bw() +
+      theme(plot.title = element_text(hjust = 0.5)) +
+      labs(title = "Percent of Tidal Volume Exhaled over Time") +
+      ylab("% of Tidal Volume Remaining") +
+      scale_x_continuous(breaks = seq(0, 10, 2), name = "Exhale Time (seconds)")
+  },
+  cacheKeyExpr = list(input$tc_flow_3, input$tc_itime, input$tc_v_1, input$tc_flow_1, input$tc_v_2, input$tc_flow_2, input$tc_v_3)
+)
 ```
 
 # Vd/Vt
@@ -1067,63 +1092,69 @@ Please note that an S/F ratio and OSI should **only** be calculated when $S_{p}O
 ### ARDSnet (Adult) PEEP Recommendations {.white-box}
 
 ```{r ardsnet_peep_graph}
-renderPlot({
-  patient_fio2 <- input$oi_fio2
-  patient_peep <- input$oi_peep
+renderCachedPlot(
+  {
+    patient_fio2 <- input$oi_fio2
+    patient_peep <- input$oi_peep
 
-  tribble(
-    ~fio2, ~lower_peep_1, ~lower_peep_2, ~upper_peep_1, ~upper_peep_2,
-    30, 5, 5, 5, 14,
-    40, 5, 8, 14, 16,
-    50, 8, 10, 16, 20,
-    60, 10, 10, 20, 20,
-    70, 10, 14, 20, 20,
-    80, 14, 14, 20, 22,
-    90, 14, 18, 22, 22,
-    100, 18, 24, 22, 24,
-  ) %>%
-    ggplot(aes(fio2)) +
-    geom_ribbon(aes(ymin = lower_peep_1, ymax = lower_peep_2), color = "blue", fill = "blue", alpha = 0.1) +
-    geom_ribbon(aes(ymin = upper_peep_1, ymax = upper_peep_2), color = "red", fill = "red", alpha = 0.1) +
-    geom_point(aes(x = patient_fio2, y = patient_peep)) +
-    geom_label(aes(x = patient_fio2, y = patient_peep), label = "patient", nudge_y = 3) +
-    theme_bw() +
-    labs(title = "Patient PEEP and FiO2 Compared to ARDSnet", subtitle = "Lower/higher PEEP strategies are in blue/red, respectively.", caption = "ARDSnet.\nNIH NHLBI ARDS Clinical Network Mechanical Ventilation Protocol Summary\n2008.") +
-    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
-    xlab("Fio2 (%)") +
-    ylab("PEEP (cmH2O)")
-})
+    tribble(
+      ~fio2, ~lower_peep_1, ~lower_peep_2, ~upper_peep_1, ~upper_peep_2,
+      30, 5, 5, 5, 14,
+      40, 5, 8, 14, 16,
+      50, 8, 10, 16, 20,
+      60, 10, 10, 20, 20,
+      70, 10, 14, 20, 20,
+      80, 14, 14, 20, 22,
+      90, 14, 18, 22, 22,
+      100, 18, 24, 22, 24,
+    ) %>%
+      ggplot(aes(fio2)) +
+      geom_ribbon(aes(ymin = lower_peep_1, ymax = lower_peep_2), color = "blue", fill = "blue", alpha = 0.1) +
+      geom_ribbon(aes(ymin = upper_peep_1, ymax = upper_peep_2), color = "red", fill = "red", alpha = 0.1) +
+      geom_point(aes(x = patient_fio2, y = patient_peep)) +
+      geom_label(aes(x = patient_fio2, y = patient_peep), label = "patient", nudge_y = 3) +
+      theme_bw() +
+      labs(title = "Patient PEEP and FiO2 Compared to ARDSnet", subtitle = "Lower/higher PEEP strategies are in blue/red, respectively.", caption = "ARDSnet.\nNIH NHLBI ARDS Clinical Network Mechanical Ventilation Protocol Summary\n2008.") +
+      theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+      xlab("Fio2 (%)") +
+      ylab("PEEP (cmH2O)")
+  },
+  cacheKeyExpr = list(input$oi_fio2, input$oi_peep)
+)
 ```
 
 ### ARDSnet PEEP Recommendations {.mobile}
 
 ```{r ardsnet_peep_graph_mobile}
-renderPlot({
-  patient_fio2 <- input$oi_fio2
-  patient_peep <- input$oi_peep
+renderCachedPlot(
+  {
+    patient_fio2 <- input$oi_fio2
+    patient_peep <- input$oi_peep
 
-  tribble(
-    ~fio2, ~lower_peep_1, ~lower_peep_2, ~upper_peep_1, ~upper_peep_2,
-    30, 5, 5, 5, 14,
-    40, 5, 8, 14, 16,
-    50, 8, 10, 16, 20,
-    60, 10, 10, 20, 20,
-    70, 10, 14, 20, 20,
-    80, 14, 14, 20, 22,
-    90, 14, 18, 22, 22,
-    100, 18, 24, 22, 24,
-  ) %>%
-    ggplot(aes(fio2)) +
-    geom_ribbon(aes(ymin = lower_peep_1, ymax = lower_peep_2), color = "blue", fill = "blue", alpha = 0.1) +
-    geom_ribbon(aes(ymin = upper_peep_1, ymax = upper_peep_2), color = "red", fill = "red", alpha = 0.1) +
-    geom_point(aes(x = patient_fio2, y = patient_peep)) +
-    geom_label(aes(x = patient_fio2, y = patient_peep), label = "patient", nudge_y = 0.8, nudge_x = 5) +
-    theme_bw() +
-    labs(title = "Patient PEEP and FiO2 Compared to ARDSnet", subtitle = "Lower/higher PEEP strategies are in blue/red, respectively.", caption = "ARDSnet.\nNIH NHLBI ARDS Clinical Network Mechanical Ventilation Protocol Summary\n2008.") +
-    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
-    xlab("Fio2 (%)") +
-    ylab("PEEP (cmH2O)")
-})
+    tribble(
+      ~fio2, ~lower_peep_1, ~lower_peep_2, ~upper_peep_1, ~upper_peep_2,
+      30, 5, 5, 5, 14,
+      40, 5, 8, 14, 16,
+      50, 8, 10, 16, 20,
+      60, 10, 10, 20, 20,
+      70, 10, 14, 20, 20,
+      80, 14, 14, 20, 22,
+      90, 14, 18, 22, 22,
+      100, 18, 24, 22, 24,
+    ) %>%
+      ggplot(aes(fio2)) +
+      geom_ribbon(aes(ymin = lower_peep_1, ymax = lower_peep_2), color = "blue", fill = "blue", alpha = 0.1) +
+      geom_ribbon(aes(ymin = upper_peep_1, ymax = upper_peep_2), color = "red", fill = "red", alpha = 0.1) +
+      geom_point(aes(x = patient_fio2, y = patient_peep)) +
+      geom_label(aes(x = patient_fio2, y = patient_peep), label = "patient", nudge_y = 0.8, nudge_x = 5) +
+      theme_bw() +
+      labs(title = "Patient PEEP and FiO2 Compared to ARDSnet", subtitle = "Lower/higher PEEP strategies are in blue/red, respectively.", caption = "ARDSnet.\nNIH NHLBI ARDS Clinical Network Mechanical Ventilation Protocol Summary\n2008.") +
+      theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+      xlab("Fio2 (%)") +
+      ylab("PEEP (cmH2O)")
+  },
+  cacheKeyExpr = list(input$oi_peep, input$oi_fio2)
+)
 ```
 
 # Qp:Qs
@@ -1254,115 +1285,121 @@ rupv <- circleFun(c(3.5, 3.75), .25, npoints = 100)
 rlpv <- circleFun(c(3.5, 3.5), .25, npoints = 100)
 
 
-renderPlot({
-  svc_sat <- input$svc_sat
-  ao_sat <- input$ao_sat
-  pv_sat <- input$pv_sat
+renderCachedPlot(
+  {
+    svc_sat <- input$svc_sat
+    ao_sat <- input$ao_sat
+    pv_sat <- input$pv_sat
 
-  tribble(
-    ~x, ~y,
-    1, 1,
-    2, 2,
-    3, 3,
-    4, 4,
-    5, 5,
-  ) %>%
-    ggplot(aes(x = x, y = y)) +
-    geom_rect(aes(xmin = 2, xmax = 3, ymin = 3, ymax = 4), fill = "purple", alpha = 0.1) + # RV
-    geom_rect(aes(xmin = 2, xmax = 3, ymin = 2, ymax = 3), fill = "purple", alpha = 0.1) + # RA
-    geom_rect(aes(xmin = 2.4, xmax = 2.6, ymin = 4, ymax = 5), fill = "blue", alpha = 0.1) + # SVC
-    geom_rect(aes(xmin = 1, xmax = 2, ymin = 3.4, ymax = 3.6), fill = "blue", alpha = 0.1) + # IVC
-    geom_rect(aes(xmin = 3, xmax = 4, ymin = 2, ymax = 3), fill = "black", alpha = 0.1) + # LV
-    geom_rect(aes(xmin = 3, xmax = 4, ymin = 3, ymax = 4), fill = "purple", alpha = 0.1) + # LA
-    geom_rect(aes(xmin = 2.3, xmax = 2.7, ymin = 1, ymax = 2), fill = "purple", alpha = 0.1) + # MPA
-    geom_rect(aes(xmin = 3.3, xmax = 3.7, ymin = 1, ymax = 2), fill = "purple", alpha = 0.1) + # Ao
-    geom_rect(aes(xmin = 2.7, xmax = 3.3, ymin = 1.4, ymax = 1.6), fill = "purple", alpha = 0.1) + # PDA
-    geom_segment(aes(x = 3, y = 4, xend = 3, yend = 3.7)) + # atrial septum top
-    geom_segment(aes(x = 3, y = 3.3, xend = 3, yend = 2)) + # atrial septum bottom, ventricular septum
-    geom_segment(aes(x = 2.7, y = 3, xend = 4, yend = 3)) + # mitral
-    geom_segment(aes(x = 2, y = 3, xend = 2.3, yend = 3)) + # tricuspid
-    geom_segment(aes(x = 2.5, y = 2.7, xend = 2.7, yend = 3)) + # tricuspid valve
-    geom_segment(aes(x = 2, y = 2, xend = 2, yend = 3.4)) + # right wall bottom
-    geom_segment(aes(x = 2, y = 3.6, xend = 2, yend = 4)) + # right wall top
-    geom_segment(aes(x = 2, y = 4, xend = 2.4, yend = 4)) + # top wall left
-    geom_segment(aes(x = 2.6, y = 4, xend = 4, yend = 4)) + # top wall right
-    geom_segment(aes(x = 4, y = 4, xend = 4, yend = 2)) + # left wall
-    geom_segment(aes(x = 2, y = 2, xend = 2.3, yend = 2)) + # bottom wall right
-    geom_segment(aes(x = 2.7, y = 2, xend = 4, yend = 2)) + # bottom wall left
-    geom_segment(aes(x = 2.5, y = 1.7, xend = 2.7, yend = 2)) + # pulmonary valve
-    geom_segment(aes(x = 3.75, y = 3.75, xend = 4.25, yend = 4.25)) + # pulmonary vein label
-    geom_polygon(data = lupv, aes(x, y), fill = "red", color = "black") + # lupv
-    geom_polygon(data = llpv, aes(x, y), fill = "red", color = "black") + # llpv
-    geom_polygon(data = rupv, aes(x, y), fill = "red", color = "black") + # rupv
-    geom_polygon(data = rlpv, aes(x, y), fill = "red", color = "black") + # rlpv
-    geom_segment(aes(x = 3.1, y = 3.5, xend = 2.9, yend = 3.5),
-      arrow = arrow(length = unit(0.2, "cm"))
-    ) + # ASD arrow
-    geom_segment(aes(x = 2.5, y = 3.1, xend = 2.5, yend = 2.9),
-      arrow = arrow(length = unit(0.2, "cm"))
-    ) + # tricuspid arrow
-    geom_segment(aes(x = 2.5, y = 2.1, xend = 2.5, yend = 1.9),
-      arrow = arrow(length = unit(0.2, "cm"))
-    ) + # pulmonary arrow
-    geom_segment(aes(x = 2.9, y = 1.5, xend = 3.1, yend = 1.5),
-      arrow = arrow(length = unit(0.2, "cm"))
-    ) + # PDA arrow
-    geom_segment(aes(x = 2.5, y = 1.5, xend = 2.5, yend = 1.3),
-      arrow = arrow(length = unit(0.2, "cm"))
-    ) + # MPA arrow
-    geom_segment(aes(x = 3.5, y = 1.5, xend = 3.5, yend = 1.3),
-      arrow = arrow(length = unit(0.2, "cm"))
-    ) + # Ao arrow down
-    geom_segment(aes(x = 3.5, y = 1.5, xend = 3.5, yend = 1.7),
-      arrow = arrow(length = unit(0.2, "cm"))
-    ) + # Ao arrow up
-    geom_text(aes(2.2, 4.8), label = "SVC", size = 3) +
-    geom_text(aes(1.5, 3.7), label = "IVC", size = 3) +
-    geom_text(aes(2.2, 3.8), label = "RA", size = 3) +
-    geom_text(aes(2.2, 2.8), label = "RV", size = 3) +
-    geom_text(aes(3.2, 3.8), label = "LA", size = 3) +
-    geom_text(aes(3.5, 2.8), label = "LV\n(excluded)", size = 3) +
-    geom_text(aes(2.1, 1.8), label = "MPA", size = 3) +
-    geom_text(aes(3.85, 1.8), label = "Ao", size = 3) +
-    geom_text(aes(3, 1.7), label = "PDA", size = 3) +
-    geom_text(aes(4.35, 4.35), label = "Pulmonary Veins", size = 3) +
-    geom_text(aes(2.2, 4.6), label = paste(svc_sat, "%", sep = ""), size = 3, color = "blue") +
-    geom_text(aes(3.9, 1.6), label = paste(ao_sat, "%", sep = ""), size = 3, color = "purple") +
-    geom_text(aes(2.1, 1.6), label = paste(ao_sat, "%", sep = ""), size = 3, color = "purple") +
-    geom_text(aes(4.6, 4.15), label = paste(pv_sat, "%", sep = ""), size = 3, color = "red") +
-    coord_fixed() +
-    theme_bw() +
-    theme(
-      axis.title.x = element_blank(),
-      axis.text.x = element_blank(),
-      axis.ticks.x = element_blank(),
-      axis.title.y = element_blank(),
-      axis.text.y = element_blank(),
-      axis.ticks.y = element_blank()
-    )
-})
+    tribble(
+      ~x, ~y,
+      1, 1,
+      2, 2,
+      3, 3,
+      4, 4,
+      5, 5,
+    ) %>%
+      ggplot(aes(x = x, y = y)) +
+      geom_rect(aes(xmin = 2, xmax = 3, ymin = 3, ymax = 4), fill = "purple", alpha = 0.1) + # RV
+      geom_rect(aes(xmin = 2, xmax = 3, ymin = 2, ymax = 3), fill = "purple", alpha = 0.1) + # RA
+      geom_rect(aes(xmin = 2.4, xmax = 2.6, ymin = 4, ymax = 5), fill = "blue", alpha = 0.1) + # SVC
+      geom_rect(aes(xmin = 1, xmax = 2, ymin = 3.4, ymax = 3.6), fill = "blue", alpha = 0.1) + # IVC
+      geom_rect(aes(xmin = 3, xmax = 4, ymin = 2, ymax = 3), fill = "black", alpha = 0.1) + # LV
+      geom_rect(aes(xmin = 3, xmax = 4, ymin = 3, ymax = 4), fill = "purple", alpha = 0.1) + # LA
+      geom_rect(aes(xmin = 2.3, xmax = 2.7, ymin = 1, ymax = 2), fill = "purple", alpha = 0.1) + # MPA
+      geom_rect(aes(xmin = 3.3, xmax = 3.7, ymin = 1, ymax = 2), fill = "purple", alpha = 0.1) + # Ao
+      geom_rect(aes(xmin = 2.7, xmax = 3.3, ymin = 1.4, ymax = 1.6), fill = "purple", alpha = 0.1) + # PDA
+      geom_segment(aes(x = 3, y = 4, xend = 3, yend = 3.7)) + # atrial septum top
+      geom_segment(aes(x = 3, y = 3.3, xend = 3, yend = 2)) + # atrial septum bottom, ventricular septum
+      geom_segment(aes(x = 2.7, y = 3, xend = 4, yend = 3)) + # mitral
+      geom_segment(aes(x = 2, y = 3, xend = 2.3, yend = 3)) + # tricuspid
+      geom_segment(aes(x = 2.5, y = 2.7, xend = 2.7, yend = 3)) + # tricuspid valve
+      geom_segment(aes(x = 2, y = 2, xend = 2, yend = 3.4)) + # right wall bottom
+      geom_segment(aes(x = 2, y = 3.6, xend = 2, yend = 4)) + # right wall top
+      geom_segment(aes(x = 2, y = 4, xend = 2.4, yend = 4)) + # top wall left
+      geom_segment(aes(x = 2.6, y = 4, xend = 4, yend = 4)) + # top wall right
+      geom_segment(aes(x = 4, y = 4, xend = 4, yend = 2)) + # left wall
+      geom_segment(aes(x = 2, y = 2, xend = 2.3, yend = 2)) + # bottom wall right
+      geom_segment(aes(x = 2.7, y = 2, xend = 4, yend = 2)) + # bottom wall left
+      geom_segment(aes(x = 2.5, y = 1.7, xend = 2.7, yend = 2)) + # pulmonary valve
+      geom_segment(aes(x = 3.75, y = 3.75, xend = 4.25, yend = 4.25)) + # pulmonary vein label
+      geom_polygon(data = lupv, aes(x, y), fill = "red", color = "black") + # lupv
+      geom_polygon(data = llpv, aes(x, y), fill = "red", color = "black") + # llpv
+      geom_polygon(data = rupv, aes(x, y), fill = "red", color = "black") + # rupv
+      geom_polygon(data = rlpv, aes(x, y), fill = "red", color = "black") + # rlpv
+      geom_segment(aes(x = 3.1, y = 3.5, xend = 2.9, yend = 3.5),
+        arrow = arrow(length = unit(0.2, "cm"))
+      ) + # ASD arrow
+      geom_segment(aes(x = 2.5, y = 3.1, xend = 2.5, yend = 2.9),
+        arrow = arrow(length = unit(0.2, "cm"))
+      ) + # tricuspid arrow
+      geom_segment(aes(x = 2.5, y = 2.1, xend = 2.5, yend = 1.9),
+        arrow = arrow(length = unit(0.2, "cm"))
+      ) + # pulmonary arrow
+      geom_segment(aes(x = 2.9, y = 1.5, xend = 3.1, yend = 1.5),
+        arrow = arrow(length = unit(0.2, "cm"))
+      ) + # PDA arrow
+      geom_segment(aes(x = 2.5, y = 1.5, xend = 2.5, yend = 1.3),
+        arrow = arrow(length = unit(0.2, "cm"))
+      ) + # MPA arrow
+      geom_segment(aes(x = 3.5, y = 1.5, xend = 3.5, yend = 1.3),
+        arrow = arrow(length = unit(0.2, "cm"))
+      ) + # Ao arrow down
+      geom_segment(aes(x = 3.5, y = 1.5, xend = 3.5, yend = 1.7),
+        arrow = arrow(length = unit(0.2, "cm"))
+      ) + # Ao arrow up
+      geom_text(aes(2.2, 4.8), label = "SVC", size = 3) +
+      geom_text(aes(1.5, 3.7), label = "IVC", size = 3) +
+      geom_text(aes(2.2, 3.8), label = "RA", size = 3) +
+      geom_text(aes(2.2, 2.8), label = "RV", size = 3) +
+      geom_text(aes(3.2, 3.8), label = "LA", size = 3) +
+      geom_text(aes(3.5, 2.8), label = "LV\n(excluded)", size = 3) +
+      geom_text(aes(2.1, 1.8), label = "MPA", size = 3) +
+      geom_text(aes(3.85, 1.8), label = "Ao", size = 3) +
+      geom_text(aes(3, 1.7), label = "PDA", size = 3) +
+      geom_text(aes(4.35, 4.35), label = "Pulmonary Veins", size = 3) +
+      geom_text(aes(2.2, 4.6), label = paste(svc_sat, "%", sep = ""), size = 3, color = "blue") +
+      geom_text(aes(3.9, 1.6), label = paste(ao_sat, "%", sep = ""), size = 3, color = "purple") +
+      geom_text(aes(2.1, 1.6), label = paste(ao_sat, "%", sep = ""), size = 3, color = "purple") +
+      geom_text(aes(4.6, 4.15), label = paste(pv_sat, "%", sep = ""), size = 3, color = "red") +
+      coord_fixed() +
+      theme_bw() +
+      theme(
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()
+      )
+  },
+  cacheKeyExpr = list(input$svc_sat, input$ao_sat, input$pv_sat)
+)
 ```
 
 ### Patient PaO2 and SpO2 Compared to Physiologic {.white-box}
 
 ```{r pao2_spo2_curve}
 
-renderPlot({
-  patient_pao2 <- input$qp_qs_pao2
-  patient_spo2 <- input$ao_sat
+renderCachedPlot(
+  {
+    patient_pao2 <- input$qp_qs_pao2
+    patient_spo2 <- input$ao_sat
 
-  tibble(pao2 = seq(0, 150, 1)) %>%
-    mutate(spo2 = ((((pao2^3 + 150 * pao2)^(-1) * 23400) + 1)^-1) * 100) %>%
-    ggplot(aes(pao2, spo2)) +
-    geom_line(color = "black") +
-    geom_point(aes(patient_pao2, patient_spo2), color = "red") +
-    geom_label(aes(patient_pao2, patient_spo2), label = "patient", nudge_x = -9, nudge_y = +6) +
-    theme_bw() +
-    xlab("PaO2 (mmHg)") +
-    ylab("Oxygen Saturation (%)") +
-    labs(caption = "Severinghaus JW.\nSimple, accurate equations for human blood O2 dissociation computations.\nJ Appl Physiol Respir Environ Exerc Physiol. 1979 Mar;46(3):599-602.") +
-    theme(plot.title = element_text(hjust = 0.5))
-})
+    tibble(pao2 = seq(0, 150, 1)) %>%
+      mutate(spo2 = ((((pao2^3 + 150 * pao2)^(-1) * 23400) + 1)^-1) * 100) %>%
+      ggplot(aes(pao2, spo2)) +
+      geom_line(color = "black") +
+      geom_point(aes(patient_pao2, patient_spo2), color = "red") +
+      geom_label(aes(patient_pao2, patient_spo2), label = "patient", nudge_x = -9, nudge_y = +6) +
+      theme_bw() +
+      xlab("PaO2 (mmHg)") +
+      ylab("Oxygen Saturation (%)") +
+      labs(caption = "Severinghaus JW.\nSimple, accurate equations for human blood O2 dissociation computations.\nJ Appl Physiol Respir Environ Exerc Physiol. 1979 Mar;46(3):599-602.") +
+      theme(plot.title = element_text(hjust = 0.5))
+  },
+  cacheKeyExpr = list(input$qp_qs_pao2, input$ao_sat)
+)
 ```
 
 
@@ -1372,7 +1409,7 @@ renderPlot({
 
 **Acknowledgments:**
 
-Many thanks to all of the beta-testers for VentmindeR, the instructors of the University of Pittsburgh Medical Center Critical Care Medicine ventilator course, and all of our research mentors.
+Thanks to all of the beta-testers for VentmindeR, the instructors of the University of Pittsburgh Medical Center Critical Care Medicine ventilator course, and all of our research mentors. Special thanks to Dr. Christopher Horvat for mentoring and Dr. Patrick Kochanek for sponsoring the T32 that gave us time to work on this project.
 
 VentmindeR was greatly facilitated by the information contained in [R for Data Science](https://r4ds.had.co.nz), [Mastering Shiny](https://mastering-shiny.org), [ggplot2: Elegant Graphics for Data Analysis](https://ggplot2-book.org), [Advanced R](https://adv-r.hadley.nz), and [R Markdown: The Definitive Guide](https://bookdown.org/yihui/rmarkdown/).
 
