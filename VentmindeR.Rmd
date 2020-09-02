@@ -24,7 +24,9 @@ library(styler)
 library(flexdashboard)
 library(flextable)
 library(shinyFeedback)
+```
 
+```{r load_shinyfeedback}
 shinyFeedback::useShinyFeedback()
 ```
 
@@ -55,7 +57,7 @@ shinyFeedback::useShinyFeedback()
 
 **Welcome:**
 
-Welcome to **VentmindeR** (version 3.0, updated 2 September, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
+Welcome to **VentmindeR** (version 3.0.1, updated 2 September, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
 
 **About Each Calculator:**
 
@@ -226,7 +228,6 @@ numericInput(
   max = 100,
   step = 1
 )
-
 
 observeEvent(input$desired_pco2, {
   if (!is.numeric(input$desired_pco2)) {
@@ -1629,15 +1630,15 @@ $\frac{-Volume}{Flow}=Resistance*Compliance=TimeConstant(\tau)$
 renderCachedPlot(
   {
     validate(
-    need(input$tc_v_1 > 0, "Please enter a Volume #1 greater than zero."),
-    need(input$tc_flow_1 > 0, "Please enter a Flow #1 greater than zero."),
-    need(input$tc_v_2 > 0, "Please enter a Volume #2 greater than zero."),
-    need(input$tc_flow_2 > 0, "Please enter a Flow #2 greater than zero."),
-    need(input$tc_v_3 > 0, "Please enter a Volume #3 greater than zero."),
-    need(input$tc_flow_3 > 0, "Please enter a Flow #3 greater than zero."),
-    need(input$tc_itime > 0, "Please enter an inspiratoy time greater than zero.")
-  )
-    
+      need(input$tc_v_1 > 0, "Please enter a Volume #1 greater than zero."),
+      need(input$tc_flow_1 > 0, "Please enter a Flow #1 greater than zero."),
+      need(input$tc_v_2 > 0, "Please enter a Volume #2 greater than zero."),
+      need(input$tc_flow_2 > 0, "Please enter a Flow #2 greater than zero."),
+      need(input$tc_v_3 > 0, "Please enter a Volume #3 greater than zero."),
+      need(input$tc_flow_3 > 0, "Please enter a Flow #3 greater than zero."),
+      need(input$tc_itime > 0, "Please enter an inspiratoy time greater than zero.")
+    )
+
     vol_1 <- input$tc_v_1
     flow_1 <- input$tc_flow_1
     vol_2 <- input$tc_v_2
@@ -1690,14 +1691,14 @@ renderCachedPlot(
 renderCachedPlot(
   {
     validate(
-    need(input$tc_v_1 > 0, "Please enter a Volume #1 greater than zero."),
-    need(input$tc_flow_1 > 0, "Please enter a Flow #1 greater than zero."),
-    need(input$tc_v_2 > 0, "Please enter a Volume #2 greater than zero."),
-    need(input$tc_flow_2 > 0, "Please enter a Flow #2 greater than zero."),
-    need(input$tc_v_3 > 0, "Please enter a Volume #3 greater than zero."),
-    need(input$tc_flow_3 > 0, "Please enter a Flow #3 greater than zero."),
-    need(input$tc_itime > 0, "Please enter an inspiratoy time greater than zero.")
-  )
+      need(input$tc_v_1 > 0, "Please enter a Volume #1 greater than zero."),
+      need(input$tc_flow_1 > 0, "Please enter a Flow #1 greater than zero."),
+      need(input$tc_v_2 > 0, "Please enter a Volume #2 greater than zero."),
+      need(input$tc_flow_2 > 0, "Please enter a Flow #2 greater than zero."),
+      need(input$tc_v_3 > 0, "Please enter a Volume #3 greater than zero."),
+      need(input$tc_flow_3 > 0, "Please enter a Flow #3 greater than zero."),
+      need(input$tc_itime > 0, "Please enter an inspiratoy time greater than zero.")
+    )
     vol_1 <- input$tc_v_1
     flow_1 <- input$tc_flow_1
     vol_2 <- input$tc_v_2
@@ -1741,15 +1742,15 @@ renderCachedPlot(
 renderCachedPlot(
   {
     validate(
-    need(input$tc_v_1 > 0, "Please enter a Volume #1 greater than zero."),
-    need(input$tc_flow_1 > 0, "Please enter a Flow #1 greater than zero."),
-    need(input$tc_v_2 > 0, "Please enter a Volume #2 greater than zero."),
-    need(input$tc_flow_2 > 0, "Please enter a Flow #2 greater than zero."),
-    need(input$tc_v_3 > 0, "Please enter a Volume #3 greater than zero."),
-    need(input$tc_flow_3 > 0, "Please enter a Flow #3 greater than zero."),
-    need(input$tc_itime > 0, "Please enter an inspiratoy time greater than zero.")
-  )
-    
+      need(input$tc_v_1 > 0, "Please enter a Volume #1 greater than zero."),
+      need(input$tc_flow_1 > 0, "Please enter a Flow #1 greater than zero."),
+      need(input$tc_v_2 > 0, "Please enter a Volume #2 greater than zero."),
+      need(input$tc_flow_2 > 0, "Please enter a Flow #2 greater than zero."),
+      need(input$tc_v_3 > 0, "Please enter a Volume #3 greater than zero."),
+      need(input$tc_flow_3 > 0, "Please enter a Flow #3 greater than zero."),
+      need(input$tc_itime > 0, "Please enter an inspiratoy time greater than zero.")
+    )
+
     vol_1 <- input$tc_v_1
     flow_1 <- input$tc_flow_1
     vol_2 <- input$tc_v_2
@@ -1902,7 +1903,7 @@ output$vd_vt <- renderText({
   )
   vd_vt <- (input$vdvt_paco2 - input$vdvt_peco2) / input$vdvt_paco2
   vd_vt_numeric <- paste("The patient's Vd/Vt is: <b>", round(vd_vt, 2), "</b>.<br><br>Normal Vd/Vt in children was originally found to be approximately 0.33 ± 0.05 in the original 1976 Kerr study, but has been suggested to be lower in more recent studies.", sep = "")
-  
+
   return(paste(vd_vt_numeric))
 })
 
@@ -2135,7 +2136,6 @@ observeEvent(oi_pao2_reactive(), {
     shinyFeedback::hideFeedback("oi_pao2")
   }
 })
-
 ```
 
 ## Outputs
@@ -2182,9 +2182,9 @@ Please note that an S/F ratio and OSI should **only** be calculated when $S_{p}O
 renderCachedPlot(
   {
     validate(
-    need(input$oi_fio2 > 0, "Please enter a numeric FiO2 (%) value greater than zero."),
-    need(input$oi_peep > 0, "Please enter a numeric PEEP (cm H2O) value greater than zero.")
-  )
+      need(input$oi_fio2 > 0, "Please enter a numeric FiO2 (%) value greater than zero."),
+      need(input$oi_peep > 0, "Please enter a numeric PEEP (cm H2O) value greater than zero.")
+    )
     patient_fio2 <- input$oi_fio2
     patient_peep <- input$oi_peep
 
@@ -2535,7 +2535,6 @@ observeEvent(input$qp_qs_pao2, {
     shinyFeedback::hideFeedback("qp_qs_pao2")
   }
 })
-
 ```
 
 ## Outputs
@@ -2555,7 +2554,7 @@ output$qp_qs_result <- renderText({
   qp_qs <- (input$ao_sat - input$svc_sat) / (input$pv_sat - input$ao_sat)
   carrying_capacity <- 1.34 * input$hgb * input$ao_sat / 100 + 0.003 * input$qp_qs_pao2
   numeric_result <- paste("The pulmonary to systemic blood flow ratio (Qp:Qs) is <b>", round(qp_qs, 2), " to 1</b>.<br>", "The patient's blood oxygen content is <b>", round(carrying_capacity, 2), " ml/dL</b>.", sep = "")
-  
+
   return(paste(numeric_result))
 })
 
@@ -2594,15 +2593,16 @@ rupv <- circleFun(c(3.5, 3.75), .25, npoints = 100)
 rlpv <- circleFun(c(3.5, 3.5), .25, npoints = 100)
 
 
-renderCachedPlot({
-  validate(
-    need(input$ao_sat > 0 & input$ao_sat <= 100, "Please enter a numeric arterial oxygen saturation value between 0 and 100%."),
-    need(input$pv_sat > 0 & input$pv_sat <= 100, "Please enter a numeric pulmonary venous oxygen saturation value between 0 and 100%."),
-    need(input$svc_sat > 0 & input$svc_sat <= 100, "Please enter a numeric mixed venous oxygen saturation value between 0 and 100%."),
-    need(input$pv_sat > input$ao_sat, "Please enter a pulmonary venous oxygen saturation (%) greater than the arterial oxygen saturation (%)."),
-    need(input$ao_sat > input$svc_sat, "Please enter a arterial oxygen saturation (%) greater than the mixed venous oxygen saturation (%).")
-  )
-  
+renderCachedPlot(
+  {
+    validate(
+      need(input$ao_sat > 0 & input$ao_sat <= 100, "Please enter a numeric arterial oxygen saturation value between 0 and 100%."),
+      need(input$pv_sat > 0 & input$pv_sat <= 100, "Please enter a numeric pulmonary venous oxygen saturation value between 0 and 100%."),
+      need(input$svc_sat > 0 & input$svc_sat <= 100, "Please enter a numeric mixed venous oxygen saturation value between 0 and 100%."),
+      need(input$pv_sat > input$ao_sat, "Please enter a pulmonary venous oxygen saturation (%) greater than the arterial oxygen saturation (%)."),
+      need(input$ao_sat > input$svc_sat, "Please enter a arterial oxygen saturation (%) greater than the mixed venous oxygen saturation (%).")
+    )
+
     svc_sat <- input$svc_sat
     ao_sat <- input$ao_sat
     pv_sat <- input$pv_sat
@@ -2700,10 +2700,10 @@ renderCachedPlot({
 renderCachedPlot(
   {
     validate(
-    need(input$ao_sat > 0 & input$ao_sat <= 100, "Please enter a numeric arterial oxygen saturation value between 0 and 100%."),
-    need(input$qp_qs_pao2 > 0 & input$qp_qs_pao2 <= 150, "Please enter a numeric PaO2 (mmHg) value between 0 mmHg and 150 mmHg.")
-  )
-    
+      need(input$ao_sat > 0 & input$ao_sat <= 100, "Please enter a numeric arterial oxygen saturation value between 0 and 100%."),
+      need(input$qp_qs_pao2 > 0 & input$qp_qs_pao2 <= 150, "Please enter a numeric PaO2 (mmHg) value between 0 mmHg and 150 mmHg.")
+    )
+
     patient_pao2 <- input$qp_qs_pao2
     patient_spo2 <- input$ao_sat
 
