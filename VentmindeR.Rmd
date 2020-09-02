@@ -23,7 +23,16 @@ library(citr)
 library(styler)
 library(flexdashboard)
 library(flextable)
+library(shinyFeedback)
+
+shinyFeedback::useShinyFeedback()
 ```
+
+<style>
+.shiny-output-error-validation {
+  color: #d9534f;
+}
+</style>
 
 <style>
   .white-box {
@@ -46,7 +55,7 @@ library(flextable)
 
 **Welcome:**
 
-Welcome to **VentmindeR** (version 2.4, updated 30 August, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
+Welcome to **VentmindeR** (version 3.0, updated 2 September, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
 
 **About Each Calculator:**
 
@@ -112,15 +121,54 @@ rm(package_names, package_versions, package_repository)
 ## Input {.sidebar}
 
 ```{r rate_inputs}
-
 numericInput(
   inputId = "current_pco2",
   label = "Current pCO2 (mmHg):",
   value = 40,
   min = 0,
   max = 100,
-  step = 1
+  step = 1,
 )
+
+observeEvent(input$current_pco2, {
+  if (!is.numeric(input$current_pco2)) {
+    shinyFeedback::feedbackDanger(
+      "current_pco2",
+      !is.numeric(input$current_pco2),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$current_pco2 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "current_pco2",
+      input$current_pco2 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$current_pco2 < 20 | input$current_pco2 > 60) {
+    shinyFeedback::feedbackDanger(
+      "current_pco2",
+      input$current_pco2 < 20 | input$current_pco2 > 60,
+      "This is a potentially dangerous CO2 value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$current_pco2)) {
+    shinyFeedback::feedbackWarning(
+      "current_pco2",
+      !is.integer(input$current_pco2),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("current_pco2")
+  }
+})
+
 numericInput(
   inputId = "current_rate",
   label = "Current Ventilator Rate (breaths/min):",
@@ -129,6 +177,47 @@ numericInput(
   max = 40,
   step = 1
 )
+
+
+observeEvent(input$current_rate, {
+  if (!is.numeric(input$current_rate)) {
+    shinyFeedback::feedbackDanger(
+      "current_rate",
+      !is.numeric(input$current_rate),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$current_rate <= 0) {
+    shinyFeedback::feedbackDanger(
+      "current_rate",
+      input$current_rate <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$current_rate < 10 | input$current_rate > 40) {
+    shinyFeedback::feedbackDanger(
+      "current_rate",
+      input$current_rate < 10 | input$current_rate > 40,
+      "This is a potentially dangerous rate. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$current_rate)) {
+    shinyFeedback::feedbackWarning(
+      "current_rate",
+      !is.integer(input$current_rate),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("current_rate")
+  }
+})
+
 numericInput(
   inputId = "desired_pco2",
   label = "Desired pCO2  (mmHg):",
@@ -137,6 +226,46 @@ numericInput(
   max = 100,
   step = 1
 )
+
+
+observeEvent(input$desired_pco2, {
+  if (!is.numeric(input$desired_pco2)) {
+    shinyFeedback::feedbackDanger(
+      "desired_pco2",
+      !is.numeric(input$desired_pco2),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$desired_pco2 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "desired_pco2",
+      input$desired_pco2 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$desired_pco2 < 20 | input$desired_pco2 > 60) {
+    shinyFeedback::feedbackDanger(
+      "desired_pco2",
+      input$desired_pco2 < 20 | input$desired_pco2 > 60,
+      "This is a potentially dangerous CO2 value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$desired_pco2)) {
+    shinyFeedback::feedbackWarning(
+      "desired_pco2",
+      !is.integer(input$desired_pco2),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("desired_pco2")
+  }
+})
 ```
 
 ## Numeric Output 
@@ -144,26 +273,23 @@ numericInput(
 ### Numeric Result {.white-box}
 
 ```{r rate_numeric_result}
+rate_calc_desired_rate <- reactive({
+  validate(
+    need(input$current_pco2 > 0, "This calculator only accepts values greater than zero. Please enter a current pCO2 value greater than zero."),
+    need(input$current_rate > 0, "This calculator only accepts values greater than zero. Please enter a current rate value greater than zero."),
+    need(input$desired_pco2 > 0, "This calculator only accepts values greater than zero. Please enter a desired pCO2 value greater than zero.")
+  )
+  round(input$current_pco2 * input$current_rate / input$desired_pco2, 0)
+})
+
 output$rate_numeric <- renderText({
-  out_result <- paste("Your desired rate is <b>", round(input$current_pco2 * input$current_rate / input$desired_pco2, 0), " breaths/min</b>.", sep = "")
-  out_rate_limit_warning <- ifelse(input$current_pco2 * input$current_rate / input$desired_pco2 >= 28,
-    paste("<br><br><span style=\"color:red\">WARNING: at this rate, a time constant calculation is recommended to prevent air trapping.</span>"),
-    paste("")
+  out_result <- paste("Your desired rate is <b>", rate_calc_desired_rate(), " breaths/min</b>.", sep = "")
+  out_rate_limit_warning <- case_when(
+    rate_calc_desired_rate() > 28 ~ paste("<br><br><span style=\"color:#d9534f\">WARNING: at this rate, a time constant calculation is recommended to prevent air trapping.</span>"),
+    rate_calc_desired_rate() < 10 ~ paste("<br><br><span style=\"color:#d9534f\">WARNING: this is a very low rate, and may lead to progressive atelectasis.</span>"),
+    TRUE ~ paste("")
   )
-  out_integer_warning <- ifelse(!is.integer(input$current_rate),
-    paste("<br><br><span style=\"color:red\">WARNING: you entered a rate that is not an integer. Was this intentional?</span>", sep = ""),
-    paste("")
-  )
-  out_co2_integer_warning <- ifelse(!is.integer(input$current_pco2) |
-    !is.integer(input$desired_pco2),
-  paste("<br><br><span style=\"color:red\">WARNING: you entered at least one CO2 value that is not an integer. Was this intentional?</span>", sep = ""),
-  paste("")
-  )
-  out_negative_value_warning <- ifelse(input$current_pco2 < 0 | input$current_rate < 0 | input$desired_pco2 < 0,
-    paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
-    paste("")
-  )
-  return(paste(out_result, out_rate_limit_warning, out_integer_warning, out_co2_integer_warning, out_negative_value_warning))
+  return(paste(out_result, out_rate_limit_warning))
 })
 
 htmlOutput("rate_numeric")
@@ -189,7 +315,7 @@ renderCachedPlot(
     current_pco2 <- input$current_pco2
     current_rate <- input$current_rate
     desired_pco2 <- input$desired_pco2
-    desired_rate <- current_pco2 * current_rate / desired_pco2
+    desired_rate <- rate_calc_desired_rate()
 
     rate_curve_table <- tibble(seq(10, 40, 1)) %>%
       rename(rate = `seq(10, 40, 1)`) %>%
@@ -219,8 +345,6 @@ renderCachedPlot(
   },
   cacheKeyExpr = list(input$current_pco2, input$current_rate, input$desired_pco2)
 )
-
-rm(colors, current_pco2, current_rate, desired_pco2, desired_rate, rate_curve_table)
 ```
 
 # Rate/Volume Change
@@ -237,6 +361,46 @@ numericInput(
   max = 100,
   step = 1
 )
+
+observeEvent(input$rv_current_pco2, {
+  if (!is.numeric(input$rv_current_pco2)) {
+    shinyFeedback::feedbackDanger(
+      "rv_current_pco2",
+      !is.numeric(input$rv_current_pco2),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$rv_current_pco2 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "rv_current_pco2",
+      input$rv_current_pco2 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$rv_current_pco2 < 20 | input$rv_current_pco2 > 60) {
+    shinyFeedback::feedbackDanger(
+      "rv_current_pco2",
+      input$rv_current_pco2 < 20 | input$rv_current_pco2 > 60,
+      "This is a potentially dangerous CO2 value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$rv_current_pco2)) {
+    shinyFeedback::feedbackWarning(
+      "rv_current_pco2",
+      !is.integer(input$rv_current_pco2),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("rv_current_pco2")
+  }
+})
+
 numericInput(
   inputId = "rv_current_rate",
   label = "Current Ventilator Rate (breaths/min):",
@@ -245,6 +409,46 @@ numericInput(
   max = 40,
   step = 1
 )
+
+observeEvent(input$rv_current_rate, {
+  if (!is.numeric(input$rv_current_rate)) {
+    shinyFeedback::feedbackDanger(
+      "rv_current_rate",
+      !is.numeric(input$rv_current_rate),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$rv_current_rate <= 0) {
+    shinyFeedback::feedbackDanger(
+      "rv_current_rate",
+      input$rv_current_rate <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$rv_current_rate < 10 | input$rv_current_rate > 40) {
+    shinyFeedback::feedbackDanger(
+      "rv_current_rate",
+      input$rv_current_rate < 10 | input$rv_current_rate > 40,
+      "This is a potentially dangerous rate. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$rv_current_rate)) {
+    shinyFeedback::feedbackWarning(
+      "rv_current_rate",
+      !is.integer(input$rv_current_rate),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("rv_current_rate")
+  }
+})
+
 numericInput(
   inputId = "rv_current_tv",
   label = "Current Tidal Volume (ml/kg):",
@@ -253,6 +457,46 @@ numericInput(
   max = 20,
   step = 1
 )
+
+observeEvent(input$rv_current_tv, {
+  if (!is.numeric(input$rv_current_tv)) {
+    shinyFeedback::feedbackDanger(
+      "rv_current_tv",
+      !is.numeric(input$rv_current_tv),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$rv_current_tv <= 0) {
+    shinyFeedback::feedbackDanger(
+      "rv_current_tv",
+      input$rv_current_tv <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$rv_current_tv < 4 | input$rv_current_tv > 10) {
+    shinyFeedback::feedbackDanger(
+      "rv_current_tv",
+      input$rv_current_tv < 4 | input$rv_current_tv > 10,
+      "This is a potentially dangerous tidal volume. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$rv_current_tv)) {
+    shinyFeedback::feedbackWarning(
+      "rv_current_tv",
+      !is.integer(input$rv_current_tv),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("rv_current_tv")
+  }
+})
+
 numericInput(
   inputId = "rv_desired_pco2",
   label = "Desired pCO2 (mmHg):",
@@ -261,6 +505,45 @@ numericInput(
   max = 100,
   step = 1
 )
+
+observeEvent(input$rv_desired_pco2, {
+  if (!is.numeric(input$rv_desired_pco2)) {
+    shinyFeedback::feedbackDanger(
+      "rv_desired_pco2",
+      !is.numeric(input$rv_desired_pco2),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$rv_desired_pco2 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "rv_desired_pco2",
+      input$rv_desired_pco2 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$rv_desired_pco2 < 20 | input$rv_desired_pco2 > 60) {
+    shinyFeedback::feedbackDanger(
+      "rv_desired_pco2",
+      input$rv_desired_pco2 < 20 | input$rv_desired_pco2 > 60,
+      "This is a potentially dangerous CO2 value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$rv_desired_pco2)) {
+    shinyFeedback::feedbackWarning(
+      "rv_desired_pco2",
+      !is.integer(input$rv_desired_pco2),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("rv_desired_pco2")
+  }
+})
 
 selectInput(
   inputId = "rv_desired_set",
@@ -278,6 +561,69 @@ numericInput(
   max = 100,
   step = 1
 )
+
+observeEvent(c(input$rv_desired_set, input$rv_desired_numeric), {
+  if (!is.numeric(input$rv_desired_numeric)) {
+    shinyFeedback::feedbackDanger(
+      "rv_desired_numeric",
+      !is.numeric(input$rv_desired_numeric),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$rv_desired_numeric <= 0) {
+    shinyFeedback::feedbackDanger(
+      "rv_desired_numeric",
+      input$rv_desired_numeric <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$rv_desired_set == "Set Tidal Volume" & input$rv_desired_numeric < 4) {
+    shinyFeedback::feedbackDanger(
+      "rv_desired_numeric",
+      input$rv_desired_numeric < 4 | input$rv_desired_numeric > 10,
+      "This is a potentially dangerous tidal volume. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (input$rv_desired_set == "Set Tidal Volume" & input$rv_desired_numeric > 10) {
+    shinyFeedback::feedbackDanger(
+      "rv_desired_numeric",
+      input$rv_desired_numeric < 4 | input$rv_desired_numeric > 10,
+      "This is a potentially dangerous tidal volume. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (input$rv_desired_set == "Set Rate" & input$rv_desired_numeric < 10) {
+    shinyFeedback::feedbackDanger(
+      "rv_desired_numeric",
+      input$rv_desired_numeric < 10 | input$rv_desired_numeric > 40,
+      "This is a potentially dangerous rate. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (input$rv_desired_set == "Set Rate" & input$rv_desired_numeric > 40) {
+    shinyFeedback::feedbackDanger(
+      "rv_desired_numeric",
+      input$rv_desired_numeric < 10 | input$rv_desired_numeric > 40,
+      "This is a potentially dangerous rate. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$rv_desired_numeric)) {
+    shinyFeedback::feedbackWarning(
+      "rv_desired_numeric",
+      !is.integer(input$rv_desired_numeric),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("rv_desired_numeric")
+  }
+})
 ```
 
 ## Numeric Output 
@@ -287,6 +633,13 @@ numericInput(
 ```{r show_rv_answer}
 
 output$rv_numeric <- renderText({
+  validate(
+    need(input$rv_current_pco2 > 0, "This calculator only accepts values greater than zero. Please enter a current pCO2 value greater than zero."),
+    need(input$rv_current_rate > 0, "This calculator only accepts values greater than zero. Please enter a current rate value greater than zero."),
+    need(input$rv_current_tv > 0, "This calculator only accepts values greater than zero. Please enter a current tidal volume value greater than zero."),
+    need(input$rv_desired_pco2 > 0, "This calculator only accepts values greater than zero. Please enter a desired pCO2 volume value greater than zero."),
+    need(input$rv_desired_numeric > 0, "This calculator only accepts values greater than zero. Please enter a desired value greater than zero.")
+  )
   if (input$rv_desired_set == "Set Tidal Volume") {
     desired_rate_rv <- input$rv_current_pco2 * input$rv_current_rate * input$rv_current_tv / input$rv_desired_pco2 / input$rv_desired_numeric
     desired_vt_rv <- input$rv_desired_numeric
@@ -298,28 +651,16 @@ output$rv_numeric <- renderText({
     rv_result <- paste("You chose a rate of <b>", input$rv_desired_numeric, " breaths/min</b> and a target pCO2 of <b>", input$rv_desired_pco2, " mmHg</b>.<br> Based on these settings, your desired tidal volume is: <b>", round(desired_vt_rv, 1), " ml/kg</b>.", sep = "")
   }
   warning_vt <- case_when(
-    desired_vt_rv > 10 ~ paste("<br><br><span style=\"color:red\">WARNING: your target tidal volume exceeds 10 ml/kg. This tidal volume may be associated with volutrauma. Please ensure there are no signs of overdistention on pressure-volume loops.</span>"),
-    desired_vt_rv < 4 ~ paste("<br><br><span style=\"color:red\">WARNING: your target tidal volume is less than 4 ml/kg. This tidal volume is low, and may be associated with progressive atelectasis. Please ensure this is not an error.</span>"),
+    desired_vt_rv > 10 ~ paste("<br><br><span style=\"color:#d9534f\">WARNING: your target tidal volume exceeds 10 ml/kg. This tidal volume may be associated with volutrauma. Please ensure there are no signs of overdistention on pressure-volume loops.</span>"),
+    desired_vt_rv < 4 ~ paste("<br><br><span style=\"color:#d9534f\">WARNING: your target tidal volume is less than 4 ml/kg. This tidal volume is low, and may be associated with progressive atelectasis. Please ensure this is not an error.</span>"),
     desired_vt_rv >= 4 & desired_vt_rv <= 10 ~ paste("")
   )
   warning_rate <- case_when(
-    desired_rate_rv > 28 ~ paste("<br><br><span style=\"color:red\">WARNING: your target rate exceeds 28 breaths/min. At this rate, a time constant calculation is recommended to prevent air trapping.</span>"),
-    desired_rate_rv < 10 ~ paste("<br><br><span style=\"color:red\">WARNING: your target rate is less than 10 breaths/min. This rate is low, and may be associated with progressive atelectasis. Please ensure this is not an error.</span>"),
+    desired_rate_rv > 28 ~ paste("<br><br><span style=\"color:#d9534f\">WARNING: your target rate exceeds 28 breaths/min. At this rate, a time constant calculation is recommended to prevent air trapping.</span>"),
+    desired_rate_rv < 10 ~ paste("<br><br><span style=\"color:#d9534f\">WARNING: your target rate is less than 10 breaths/min. This rate is low, and may be associated with progressive atelectasis. Please ensure this is not an error.</span>"),
     desired_rate_rv >= 10 & desired_rate_rv <= 28 ~ paste("")
   )
-  warning_integer <- ifelse(is.integer(input$rv_current_pco2) & is.integer(input$rv_current_rate) & is.integer(input$rv_desired_pco2) & is.integer(input$rv_desired_numeric) & is.integer(input$rv_current_tv),
-    paste(""),
-    paste("<br><br><span style=\"color:red\">WARNING: you have entered non-integer values. Is this intentional?</span>")
-  )
-  warning_negative_value <- ifelse(input$rv_current_pco2 < 0 |
-    input$rv_current_rate < 0 |
-    input$rv_current_tv < 0 |
-    input$rv_desired_pco2 < 0 |
-    input$rv_desired_numeric < 0,
-  paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
-  paste("")
-  )
-  return(paste(rv_result, warning_vt, warning_rate, warning_integer, warning_negative_value))
+  return(paste(rv_result, warning_vt, warning_rate))
 })
 
 htmlOutput("rv_numeric")
@@ -346,6 +687,13 @@ $Rate_{Desired}*TidalVolume_{Desired}*pCO2_{Desired}$
 ```{r show_rv_plot}
 renderCachedPlot(
   {
+    validate(
+      need(input$rv_current_pco2 > 0, "This calculator only accepts values greater than zero. Please enter a current pCO2 value greater than zero."),
+      need(input$rv_current_rate > 0, "This calculator only accepts values greater than zero. Please enter a current rate value greater than zero."),
+      need(input$rv_current_tv > 0, "This calculator only accepts values greater than zero. Please enter a current tidal volume value greater than zero."),
+      need(input$rv_desired_pco2 > 0, "This calculator only accepts values greater than zero. Please enter a desired pCO2 volume value greater than zero."),
+      need(input$rv_desired_numeric > 0, "This calculator only accepts values greater than zero. Please enter a desired value greater than zero.")
+    )
     current_mv <- input$rv_current_rate * input$rv_current_tv
     desired_mv <- input$rv_current_rate * input$rv_current_tv * input$rv_current_pco2 / input$rv_desired_pco2
     current_pco2 <- input$rv_current_pco2
@@ -385,6 +733,13 @@ renderCachedPlot(
 ```{r show_rate_by_vt_plot}
 renderCachedPlot(
   {
+    validate(
+      need(input$rv_current_pco2 > 0, "This calculator only accepts values greater than zero. Please enter a current pCO2 value greater than zero."),
+      need(input$rv_current_rate > 0, "This calculator only accepts values greater than zero. Please enter a current rate value greater than zero."),
+      need(input$rv_current_tv > 0, "This calculator only accepts values greater than zero. Please enter a current tidal volume value greater than zero."),
+      need(input$rv_desired_pco2 > 0, "This calculator only accepts values greater than zero. Please enter a desired pCO2 volume value greater than zero."),
+      need(input$rv_desired_numeric > 0, "This calculator only accepts values greater than zero. Please enter a desired value greater than zero.")
+    )
     if (input$rv_desired_set == "Set Tidal Volume") {
       current_pco2 <- input$rv_current_pco2
       current_rate <- input$rv_current_rate
@@ -469,6 +824,46 @@ numericInput(
   max = 1000,
   step = 1
 )
+
+observeEvent(input$cr_vt, {
+  if (!is.numeric(input$cr_vt)) {
+    shinyFeedback::feedbackDanger(
+      "cr_vt",
+      !is.numeric(input$cr_vt),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$cr_vt <= 0) {
+    shinyFeedback::feedbackDanger(
+      "cr_vt",
+      input$cr_vt <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$cr_vt < 10 | input$cr_vt > 700) {
+    shinyFeedback::feedbackDanger(
+      "cr_vt",
+      input$cr_vt < 10 | input$cr_vt > 700,
+      "This is a potentially dangerous tidal volume. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$cr_vt)) {
+    shinyFeedback::feedbackWarning(
+      "cr_vt",
+      !is.integer(input$cr_vt),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("cr_vt")
+  }
+})
+
 numericInput(
   inputId = "cr_pip",
   label = "Current PIP (cmH20):",
@@ -477,6 +872,46 @@ numericInput(
   max = 100,
   step = 1
 )
+
+observeEvent(input$cr_pip, {
+  if (!is.numeric(input$cr_pip)) {
+    shinyFeedback::feedbackDanger(
+      "cr_pip",
+      !is.numeric(input$cr_pip),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$cr_pip <= 0) {
+    shinyFeedback::feedbackDanger(
+      "cr_pip",
+      input$cr_pip <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$cr_pip < 8 | input$cr_pip > 35) {
+    shinyFeedback::feedbackDanger(
+      "cr_pip",
+      input$cr_pip < 8 | input$cr_pip > 35,
+      "This is a potentially dangerous peak pressure. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$cr_pip)) {
+    shinyFeedback::feedbackWarning(
+      "cr_pip",
+      !is.integer(input$cr_pip),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("cr_pip")
+  }
+})
+
 numericInput(
   inputId = "cr_pplat",
   label = "Current Plateau Pressure (cmH20):",
@@ -485,6 +920,46 @@ numericInput(
   max = 100,
   step = 1
 )
+
+observeEvent(input$cr_pplat, {
+  if (!is.numeric(input$cr_pplat)) {
+    shinyFeedback::feedbackDanger(
+      "cr_pplat",
+      !is.numeric(input$cr_pplat),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$cr_pplat <= 0) {
+    shinyFeedback::feedbackDanger(
+      "cr_pplat",
+      input$cr_pplat <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$cr_pplat < 8 | input$cr_pplat > 35) {
+    shinyFeedback::feedbackDanger(
+      "cr_pplat",
+      input$cr_pplat < 8 | input$cr_pplat > 35,
+      "This is a potentially dangerous plateau pressure. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$cr_pplat)) {
+    shinyFeedback::feedbackWarning(
+      "cr_pplat",
+      !is.integer(input$cr_pplat),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("cr_pplat")
+  }
+})
+
 numericInput(
   inputId = "cr_peep",
   label = "Current PEEP (cmH20):",
@@ -493,6 +968,46 @@ numericInput(
   max = 100,
   step = 1
 )
+
+observeEvent(input$cr_peep, {
+  if (!is.numeric(input$cr_peep)) {
+    shinyFeedback::feedbackDanger(
+      "cr_peep",
+      !is.numeric(input$cr_peep),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$cr_peep <= 0) {
+    shinyFeedback::feedbackDanger(
+      "cr_peep",
+      input$cr_peep <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$cr_peep < 5 | input$cr_peep > 20) {
+    shinyFeedback::feedbackDanger(
+      "cr_peep",
+      input$cr_peep < 5 | input$cr_peep > 20,
+      "This is a potentially dangerous PEEP value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$cr_peep)) {
+    shinyFeedback::feedbackWarning(
+      "cr_peep",
+      !is.integer(input$cr_peep),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("cr_peep")
+  }
+})
+
 numericInput(
   inputId = "cr_itime",
   label = "Current Inspiratory Time (seconds):",
@@ -501,6 +1016,37 @@ numericInput(
   max = 10,
   step = 0.01
 )
+
+observeEvent(input$cr_itime, {
+  if (!is.numeric(input$cr_itime)) {
+    shinyFeedback::feedbackDanger(
+      "cr_itime",
+      !is.numeric(input$cr_itime),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$cr_itime <= 0) {
+    shinyFeedback::feedbackDanger(
+      "cr_itime",
+      input$cr_itime <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$cr_itime < 8 | input$cr_itime > 35) {
+    shinyFeedback::feedbackDanger(
+      "cr_itime",
+      input$cr_itime < 0.4 | input$cr_itime > 2,
+      "This is a potentially dangerous iTime. Are you sure?",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("cr_itime")
+  }
+})
+
 numericInput(
   inputId = "cr_height",
   label = "Patient Height (cm):",
@@ -509,6 +1055,44 @@ numericInput(
   max = 1000,
   step = 1
 )
+
+observeEvent(input$cr_height, {
+  if (!is.numeric(input$cr_height)) {
+    shinyFeedback::feedbackDanger(
+      "cr_height",
+      !is.numeric(input$cr_height),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$cr_height <= 0) {
+    shinyFeedback::feedbackDanger(
+      "cr_height",
+      input$cr_height <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$cr_height < 40) {
+    shinyFeedback::feedbackDanger(
+      "cr_height",
+      input$cr_height < 40,
+      "The average height of a term newborn is 50 cm. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (input$cr_height > 200) {
+    shinyFeedback::feedbackDanger(
+      "cr_height",
+      input$cr_height > 200,
+      "The average height of adult males and females are 175 cm and 162 cm, respectively. Are you sure?",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("cr_height")
+  }
+})
 ```
 
 ## Numeric Results
@@ -517,42 +1101,20 @@ numericInput(
 
 Below are the patient's calculated compliance, resistance, _inspiratory_ time constant and maximum safe respiratory rate **assuming** that the inspiratory and expiratory time constants are the same. **Please note** that this assumption may not be valid, especially in patients with obstructive physiology. An _expiratory_ time constant calculation is **always** recommended.
 
-```{r compliance_warning}
-output$warning_compliance <- renderText({
-  warning_compliance_height <- case_when(
-    input$cr_height > 200 ~ paste("<span style=\"color:red\"><br>WARNING: you chose a height of ", input$cr_height, " cm. The average height of adult males and females are 175 cm and 162 cm, respectively. Is this deliberate?</span>"),
-    input$cr_height < 40 ~ paste("<span style=\"color:red\"><br>WARNING: you chose a height of ", input$cr_height, " cm. The average height of a term newborn is 50 cm. Is this deliberate?</span>"),
-    TRUE ~ paste("")
-  )
-  warning_compliance_integer <- ifelse(is.integer(input$cr_vt) & is.integer(input$cr_pip) & is.integer(input$cr_pplat) & is.integer(input$cr_peep),
-    paste(""),
-    paste("<br><span style=\"color:red\">WARNING: you have entered non-integer values other than inspiratory time or height. Is this deliberate?</span>")
-  )
-  warning_negative_value <- ifelse(input$cr_vt < 0 |
-    input$cr_pip < 0 |
-    input$cr_pplat < 0 |
-    input$cr_peep < 0 |
-    input$cr_itime < 0,
-  paste("<br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
-  paste("")
-  )
-  warning_illogical_pressures <- case_when(
-    input$cr_pip < input$cr_pplat ~ "<br><span style=\"color:red\">WARNING: you entered a PIP less than plateau pressure. This is only possible in a patient with active inhalation. Please re-check your measurements.</span>",
-    input$cr_pplat <= input$cr_peep ~ "<br><span style=\"color:red\">WARNING: you entered a plateau pressure less than or equal to PEEP. Is your patient in CPAP? Please do not use this value, and re-check your measurements.</span>",
-    input$cr_pip <= input$cr_peep ~ "<br><span style=\"color:red\">WARNING: you entered a PIP less than or equal to PEEP. Is this intentonal? If so, it may imply that your patient is actively inhaling, and not receiving adequate ventilator support.</span>",
-    TRUE ~ paste("")
-  )
-  return(paste(warning_compliance_height, warning_compliance_integer, warning_negative_value, warning_illogical_pressures))
-})
-
-htmlOutput("warning_compliance")
-```
-
-
 ### Numeric Results {.white-box}
 
 ```{r compliance_and_resistance_numeric}
 renderTable({
+  validate(
+    need(input$cr_pplat > 0, "Please enter a numeric plateau pressure greater than zero."),
+    need(input$cr_peep > 0, "Please enter a numeric positive end expiratory pressure greater than zero."),
+    need(input$cr_vt > 0, "Please enter a numeric tidal volume greater than zero."),
+    need(input$cr_pip > 0, "Please enter a numeric peak pressure greater than zero."),
+    need(input$cr_itime > 0, "Please enter a numeric inspiratory time greater than zero."),
+    need(input$cr_pip > input$cr_peep, "Please enter a PIP greater than PEEP."),
+    need(input$cr_pplat > input$cr_peep, "Please enter a plateau pressure greater than PEEP."),
+    need(input$cr_pip > input$cr_pplat, "Please enter a PIP greater than plateau pressure.")
+  )
   compliance <- input$cr_vt / 1000 / (input$cr_pplat - input$cr_peep)
   resistance <- (input$cr_pip - input$cr_pplat) / (input$cr_vt / 1000 / input$cr_itime)
   time_constant <- compliance * resistance
@@ -586,6 +1148,17 @@ $Maximum Safe Respiratory Rate=\frac{60}{3\tau+iTime}$
 ```{r compliance_curve}
 renderCachedPlot(
   {
+    validate(
+      need(input$cr_pplat > 0, "Please enter a numeric plateau pressure greater than zero."),
+      need(input$cr_peep > 0, "Please enter a numeric positive end expiratory pressure greater than zero."),
+      need(input$cr_vt > 0, "Please enter a numeric tidal volume greater than zero."),
+      need(input$cr_pip > 0, "Please enter a numeric peak pressure greater than zero."),
+      need(input$cr_itime > 0, "Please enter a numeric inspiratory time greater than zero."),
+      need(input$cr_pip > input$cr_peep, "Please enter a PIP greater than PEEP."),
+      need(input$cr_pplat > input$cr_peep, "Please enter a plateau pressure greater than PEEP."),
+      need(input$cr_pip > input$cr_pplat, "Please enter a PIP greater than plateau pressure."),
+      need(input$cr_height >= 40 & input$cr_height <= 200, "Please enter a height between 40 and 200 cm.")
+    )
     pt_compliance <- input$cr_vt / (input$cr_pplat - input$cr_peep)
     pt_height <- input$cr_height
 
@@ -613,6 +1186,17 @@ renderCachedPlot(
 ```{r resistance_curve}
 renderCachedPlot(
   {
+    validate(
+      need(input$cr_pplat > 0, "Please enter a numeric plateau pressure greater than zero."),
+      need(input$cr_peep > 0, "Please enter a numeric positive end expiratory pressure greater than zero."),
+      need(input$cr_vt > 0, "Please enter a numeric tidal volume greater than zero."),
+      need(input$cr_pip > 0, "Please enter a numeric peak pressure greater than zero."),
+      need(input$cr_itime > 0, "Please enter a numeric inspiratory time greater than zero."),
+      need(input$cr_pip > input$cr_peep, "Please enter a PIP greater than PEEP."),
+      need(input$cr_pplat > input$cr_peep, "Please enter a plateau pressure greater than PEEP."),
+      need(input$cr_pip > input$cr_pplat, "Please enter a PIP greater than plateau pressure."),
+      need(input$cr_height >= 40 & input$cr_height <= 200, "Please enter a height between 40 and 200 cm.")
+    )
     pt_resistance <- (input$cr_pip - input$cr_pplat) / (input$cr_vt / 1000 / input$cr_itime)
     pt_height <- input$cr_height
 
@@ -635,7 +1219,6 @@ renderCachedPlot(
 )
 ```
 
-
 # Time Constant
 
 ## Inputs {.sidebar}
@@ -649,6 +1232,39 @@ numericInput(
   max = 1000,
   step = 1
 )
+
+observeEvent(input$tc_v_1, {
+  if (!is.numeric(input$tc_v_1)) {
+    shinyFeedback::feedbackDanger(
+      "tc_v_1",
+      !is.numeric(input$tc_v_1),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$tc_v_1 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "tc_v_1",
+      input$tc_v_1 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$tc_v_1)) {
+    shinyFeedback::feedbackWarning(
+      "tc_v_1",
+      !is.integer(input$tc_v_1),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("tc_v_1")
+  }
+})
+
+
 numericInput(
   inputId = "tc_flow_1",
   label = "Flow #1 (l/min):",
@@ -657,6 +1273,38 @@ numericInput(
   max = 1000,
   step = 1
 )
+
+observeEvent(input$tc_flow_1, {
+  if (!is.numeric(input$tc_flow_1)) {
+    shinyFeedback::feedbackDanger(
+      "tc_flow_1",
+      !is.numeric(input$tc_flow_1),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$tc_flow_1 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "tc_flow_1",
+      input$tc_flow_1 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$tc_flow_1)) {
+    shinyFeedback::feedbackWarning(
+      "tc_flow_1",
+      !is.integer(input$tc_flow_1),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("tc_flow_1")
+  }
+})
+
 numericInput(
   inputId = "tc_v_2",
   label = "Tidal Volume #2 (ml):",
@@ -665,6 +1313,38 @@ numericInput(
   max = 1000,
   step = 1
 )
+
+observeEvent(input$tc_v_2, {
+  if (!is.numeric(input$tc_v_2)) {
+    shinyFeedback::feedbackDanger(
+      "tc_v_2",
+      !is.numeric(input$tc_v_2),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$tc_v_2 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "tc_v_2",
+      input$tc_v_2 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$tc_v_2)) {
+    shinyFeedback::feedbackWarning(
+      "tc_v_2",
+      !is.integer(input$tc_v_2),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("tc_v_2")
+  }
+})
+
 numericInput(
   inputId = "tc_flow_2",
   label = "Flow #2 (l/min):",
@@ -673,6 +1353,39 @@ numericInput(
   max = 1000,
   step = 1
 )
+
+observeEvent(input$tc_flow_2, {
+  if (!is.numeric(input$tc_flow_2)) {
+    shinyFeedback::feedbackDanger(
+      "tc_flow_2",
+      !is.numeric(input$tc_flow_2),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$tc_flow_2 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "tc_flow_2",
+      input$tc_flow_2 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$tc_flow_2)) {
+    shinyFeedback::feedbackWarning(
+      "tc_flow_2",
+      !is.integer(input$tc_flow_2),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("tc_flow_2")
+  }
+})
+
+
 numericInput(
   inputId = "tc_v_3",
   label = "Tidal Volume #3 (ml):",
@@ -681,6 +1394,38 @@ numericInput(
   max = 1000,
   step = 1
 )
+
+observeEvent(input$tc_v_3, {
+  if (!is.numeric(input$tc_v_3)) {
+    shinyFeedback::feedbackDanger(
+      "tc_v_3",
+      !is.numeric(input$tc_v_3),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$tc_v_3 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "tc_v_3",
+      input$tc_v_3 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$tc_v_3)) {
+    shinyFeedback::feedbackWarning(
+      "tc_v_3",
+      !is.integer(input$tc_v_3),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("tc_v_3")
+  }
+})
+
 numericInput(
   inputId = "tc_flow_3",
   label = "Flow #3 (l/min):",
@@ -689,6 +1434,38 @@ numericInput(
   max = 1000,
   step = 1
 )
+
+observeEvent(input$tc_flow_3, {
+  if (!is.numeric(input$tc_flow_3)) {
+    shinyFeedback::feedbackDanger(
+      "tc_flow_3",
+      !is.numeric(input$tc_flow_3),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$tc_flow_3 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "tc_flow_3",
+      input$tc_flow_3 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$tc_flow_3)) {
+    shinyFeedback::feedbackWarning(
+      "tc_flow_3",
+      !is.integer(input$tc_flow_3),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("tc_flow_3")
+  }
+})
+
 numericInput(
   inputId = "tc_itime",
   label = "Current Inspiratory Time (seconds):",
@@ -697,6 +1474,36 @@ numericInput(
   max = 10,
   step = 0.01
 )
+
+observeEvent(input$tc_itime, {
+  if (!is.numeric(input$tc_itime)) {
+    shinyFeedback::feedbackDanger(
+      "tc_itime",
+      !is.numeric(input$tc_itime),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$tc_itime <= 0) {
+    shinyFeedback::feedbackDanger(
+      "tc_itime",
+      input$tc_itime <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$tc_itime < 8 | input$tc_itime > 35) {
+    shinyFeedback::feedbackDanger(
+      "tc_itime",
+      input$tc_itime < 0.4 | input$tc_itime > 2,
+      "This is a potentially dangerous iTime. Are you sure?",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("tc_itime")
+  }
+})
 ```
 
 ## Numeric Result
@@ -707,6 +1514,15 @@ Below is the patient's calculated _expiratory_ time constant and maximum safe re
 
 ```{r tc_warning}
 output$tc_warning <- renderText({
+  validate(
+    need(input$tc_v_1 > 0, "Please enter a Volume #1 greater than zero."),
+    need(input$tc_flow_1 > 0, "Please enter a Flow #1 greater than zero."),
+    need(input$tc_v_2 > 0, "Please enter a Volume #2 greater than zero."),
+    need(input$tc_flow_2 > 0, "Please enter a Flow #2 greater than zero."),
+    need(input$tc_v_3 > 0, "Please enter a Volume #3 greater than zero."),
+    need(input$tc_flow_3 > 0, "Please enter a Flow #3 greater than zero."),
+    need(input$tc_itime > 0, "Please enter an inspiratoy time greater than zero.")
+  )
   vol_1 <- input$tc_v_1
   flow_1 <- input$tc_flow_1
   vol_2 <- input$tc_v_2
@@ -734,21 +1550,9 @@ output$tc_warning <- renderText({
     out <- paste("<br>The regression adjusted r^2 value is: ", round(tc_regression_r_squared, 3), ". This is likely acceptable.", sep = "")
   }
   if (tc_regression_r_squared < 0.8) {
-    out <- paste("<br><span style=\"color:red\">WARNING: the regression adjusted r^2 value is: ", round(tc_regression_r_squared, 3), ". This suggests a variable expiratory flow waveform. Possible explantions include secretions, active exhalation, or dynamic airway collapse.</span>", sep = "")
+    out <- paste("<br><span style=\"color:#d9534f\">WARNING: the regression adjusted r^2 value is: ", round(tc_regression_r_squared, 3), ". This suggests a variable expiratory flow waveform. Possible explantions include secretions, active exhalation, or dynamic airway collapse.</span>", sep = "")
   }
-
-  warning_negative_value <- ifelse(input$tc_v_1 < 0 |
-    input$tc_flow_1 < 0 |
-    input$tc_v_2 < 0 |
-    input$tc_flow_2 < 0 |
-    input$tc_v_3 < 0 |
-    input$tc_flow_3 < 0 |
-    input$tc_itime < 0,
-  paste("<br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
-  paste("")
-  )
-
-  return(paste(out, warning_negative_value))
+  return(paste(out))
 })
 
 htmlOutput("tc_warning")
@@ -758,6 +1562,15 @@ htmlOutput("tc_warning")
 
 ```{r show_tc_table}
 renderTable({
+  validate(
+    need(input$tc_v_1 > 0, "Please enter a Volume #1 greater than zero."),
+    need(input$tc_flow_1 > 0, "Please enter a Flow #1 greater than zero."),
+    need(input$tc_v_2 > 0, "Please enter a Volume #2 greater than zero."),
+    need(input$tc_flow_2 > 0, "Please enter a Flow #2 greater than zero."),
+    need(input$tc_v_3 > 0, "Please enter a Volume #3 greater than zero."),
+    need(input$tc_flow_3 > 0, "Please enter a Flow #3 greater than zero."),
+    need(input$tc_itime > 0, "Please enter an inspiratoy time greater than zero.")
+  )
   vol_1 <- input$tc_v_1
   flow_1 <- input$tc_flow_1
   vol_2 <- input$tc_v_2
@@ -815,6 +1628,16 @@ $\frac{-Volume}{Flow}=Resistance*Compliance=TimeConstant(\tau)$
 ```{r tc_regression_plot}
 renderCachedPlot(
   {
+    validate(
+    need(input$tc_v_1 > 0, "Please enter a Volume #1 greater than zero."),
+    need(input$tc_flow_1 > 0, "Please enter a Flow #1 greater than zero."),
+    need(input$tc_v_2 > 0, "Please enter a Volume #2 greater than zero."),
+    need(input$tc_flow_2 > 0, "Please enter a Flow #2 greater than zero."),
+    need(input$tc_v_3 > 0, "Please enter a Volume #3 greater than zero."),
+    need(input$tc_flow_3 > 0, "Please enter a Flow #3 greater than zero."),
+    need(input$tc_itime > 0, "Please enter an inspiratoy time greater than zero.")
+  )
+    
     vol_1 <- input$tc_v_1
     flow_1 <- input$tc_flow_1
     vol_2 <- input$tc_v_2
@@ -866,6 +1689,15 @@ renderCachedPlot(
 ```{r exhale_graph}
 renderCachedPlot(
   {
+    validate(
+    need(input$tc_v_1 > 0, "Please enter a Volume #1 greater than zero."),
+    need(input$tc_flow_1 > 0, "Please enter a Flow #1 greater than zero."),
+    need(input$tc_v_2 > 0, "Please enter a Volume #2 greater than zero."),
+    need(input$tc_flow_2 > 0, "Please enter a Flow #2 greater than zero."),
+    need(input$tc_v_3 > 0, "Please enter a Volume #3 greater than zero."),
+    need(input$tc_flow_3 > 0, "Please enter a Flow #3 greater than zero."),
+    need(input$tc_itime > 0, "Please enter an inspiratoy time greater than zero.")
+  )
     vol_1 <- input$tc_v_1
     flow_1 <- input$tc_flow_1
     vol_2 <- input$tc_v_2
@@ -908,6 +1740,16 @@ renderCachedPlot(
 ```{r exhale_graph_mobile}
 renderCachedPlot(
   {
+    validate(
+    need(input$tc_v_1 > 0, "Please enter a Volume #1 greater than zero."),
+    need(input$tc_flow_1 > 0, "Please enter a Flow #1 greater than zero."),
+    need(input$tc_v_2 > 0, "Please enter a Volume #2 greater than zero."),
+    need(input$tc_flow_2 > 0, "Please enter a Flow #2 greater than zero."),
+    need(input$tc_v_3 > 0, "Please enter a Volume #3 greater than zero."),
+    need(input$tc_flow_3 > 0, "Please enter a Flow #3 greater than zero."),
+    need(input$tc_itime > 0, "Please enter an inspiratoy time greater than zero.")
+  )
+    
     vol_1 <- input$tc_v_1
     flow_1 <- input$tc_flow_1
     vol_2 <- input$tc_v_2
@@ -958,6 +1800,46 @@ numericInput(
   max = 100,
   step = 1
 )
+
+observeEvent(input$vdvt_paco2, {
+  if (!is.numeric(input$vdvt_paco2)) {
+    shinyFeedback::feedbackDanger(
+      "vdvt_paco2",
+      !is.numeric(input$vdvt_paco2),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$vdvt_paco2 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "vdvt_paco2",
+      input$vdvt_paco2 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$vdvt_paco2 < 20 | input$vdvt_paco2 > 60) {
+    shinyFeedback::feedbackDanger(
+      "vdvt_paco2",
+      input$vdvt_paco2 < 20 | input$vdvt_paco2 > 60,
+      "This is a potentially dangerous CO2 value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$vdvt_paco2)) {
+    shinyFeedback::feedbackWarning(
+      "vdvt_paco2",
+      !is.integer(input$vdvt_paco2),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("vdvt_paco2")
+  }
+})
+
 numericInput(
   inputId = "vdvt_peco2",
   label = "End-Tidal CO2 (mmHg)",
@@ -966,6 +1848,45 @@ numericInput(
   max = 100,
   step = 1
 )
+
+observeEvent(input$vdvt_peco2, {
+  if (!is.numeric(input$vdvt_peco2)) {
+    shinyFeedback::feedbackDanger(
+      "vdvt_peco2",
+      !is.numeric(input$vdvt_peco2),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$vdvt_peco2 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "vdvt_peco2",
+      input$vdvt_peco2 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$vdvt_peco2 < 20 | input$vdvt_peco2 > 60) {
+    shinyFeedback::feedbackDanger(
+      "vdvt_peco2",
+      input$vdvt_peco2 < 20 | input$vdvt_peco2 > 60,
+      "This is a potentially dangerous CO2 value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$vdvt_peco2)) {
+    shinyFeedback::feedbackWarning(
+      "vdvt_peco2",
+      !is.integer(input$vdvt_peco2),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("vdvt_peco2")
+  }
+})
 ```
 
 ## Outputs
@@ -974,18 +1895,15 @@ numericInput(
 
 ```{r vd_vt_text}
 output$vd_vt <- renderText({
+  validate(
+    need(input$vdvt_paco2 > 0, "Please enter a numeric PaCO2 value greater than zero."),
+    need(input$vdvt_peco2 > 0, "Please enter a numeric End Tidal CO2 value greater than zero."),
+    need(input$vdvt_paco2 > input$vdvt_peco2, "Please enter a PaCO2 value greater than End Tidal CO2 You entered a PaCO2 less than End Tidal CO2. While this is possible in special circumstances (Karnik et. al.), it is not possible to calculate Vd/Vt. Did you reverse PaCO2 and End Tidal CO2?")
+  )
   vd_vt <- (input$vdvt_paco2 - input$vdvt_peco2) / input$vdvt_paco2
   vd_vt_numeric <- paste("The patient's Vd/Vt is: <b>", round(vd_vt, 2), "</b>.<br><br>Normal Vd/Vt in children was originally found to be approximately 0.33 ± 0.05 in the original 1976 Kerr study, but has been suggested to be lower in more recent studies.", sep = "")
-  warning_negative_value <- ifelse(input$vdvt_paco2 < 0 |
-    input$vdvt_peco2 < 0,
-  paste("<br><br><span style=\"color:red\">WARNING: you entered at least one negative value. This is not possible, and will generate an unusable result.</span>"),
-  paste("")
-  )
-  warning_negative_vd_vt <- ifelse((input$vdvt_paco2 - input$vdvt_peco2) / input$vdvt_paco2 < 0,
-    paste("<br><br><span style=\"color:red\">WARNING: the calculated Vd/Vt is negative. While this is possible in special circumstances (Karnik et. al.), you should be skeptical of the result. Did you reverse PaCO2 and End Tidal CO2? </span>"),
-    paste("")
-  )
-  return(paste(vd_vt_numeric, warning_negative_value, warning_negative_vd_vt))
+  
+  return(paste(vd_vt_numeric))
 })
 
 htmlOutput("vd_vt")
@@ -1013,6 +1931,53 @@ numericInput(
   step = 1
 )
 
+observeEvent(input$oi_fio2, {
+  if (!is.numeric(input$oi_fio2)) {
+    shinyFeedback::feedbackDanger(
+      "oi_fio2",
+      !is.numeric(input$oi_fio2),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$oi_fio2 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "oi_fio2",
+      input$oi_fio2 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$oi_fio2 < 21) {
+    shinyFeedback::feedbackDanger(
+      "oi_fio2",
+      input$oi_fio2 < 21,
+      "The FiO2 of room air is 21%. Is your patient really on hypoxic mix?",
+      icon = NULL
+    )
+  }
+  else if (input$oi_fio2 > 100) {
+    shinyFeedback::feedbackDanger(
+      "oi_fio2",
+      input$oi_fio2 > 100,
+      "Please enter an FiO2 ≤ 100%.",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$oi_fio2)) {
+    shinyFeedback::feedbackWarning(
+      "oi_fio2",
+      !is.integer(input$oi_fio2),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("oi_fio2")
+  }
+})
+
 numericInput(
   inputId = "oi_map",
   label = "Current Mean Airway Pressure (cmH2O):",
@@ -1021,6 +1986,46 @@ numericInput(
   max = 100,
   step = 1
 )
+
+observeEvent(input$oi_map, {
+  if (!is.numeric(input$oi_map)) {
+    shinyFeedback::feedbackDanger(
+      "oi_map",
+      !is.numeric(input$oi_map),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$oi_map <= 0) {
+    shinyFeedback::feedbackDanger(
+      "oi_map",
+      input$oi_map <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$oi_map < 5 | input$oi_map > 20) {
+    shinyFeedback::feedbackDanger(
+      "oi_map",
+      input$oi_map < 5 | input$oi_map > 30,
+      "This is a potentially dangerous MAP value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$oi_map)) {
+    shinyFeedback::feedbackWarning(
+      "oi_map",
+      !is.integer(input$oi_map),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("oi_map")
+  }
+})
+
 numericInput(
   inputId = "oi_peep",
   label = "Current PEEP (cmH2O):",
@@ -1029,6 +2034,46 @@ numericInput(
   max = 100,
   step = 1
 )
+
+observeEvent(input$oi_peep, {
+  if (!is.numeric(input$oi_peep)) {
+    shinyFeedback::feedbackDanger(
+      "oi_peep",
+      !is.numeric(input$oi_peep),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$oi_peep <= 0) {
+    shinyFeedback::feedbackDanger(
+      "oi_peep",
+      input$oi_peep <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$oi_peep < 5 | input$oi_peep > 20) {
+    shinyFeedback::feedbackDanger(
+      "oi_peep",
+      input$oi_peep < 5 | input$oi_peep > 20,
+      "This is a potentially dangerous PEEP value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$oi_peep)) {
+    shinyFeedback::feedbackWarning(
+      "oi_peep",
+      !is.integer(input$oi_peep),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("oi_peep")
+  }
+})
+
 
 selectInput(
   inputId = "oi_desired",
@@ -1049,6 +2094,48 @@ numericInput(
   max = 1000,
   step = 1
 )
+
+oi_pao2_reactive <- reactive(list(input$oi_desired, input$oi_pao2))
+
+observeEvent(oi_pao2_reactive(), {
+  if (!is.numeric(input$oi_pao2)) {
+    shinyFeedback::feedbackDanger(
+      "oi_pao2",
+      !is.numeric(input$oi_pao2),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$oi_pao2 <= 0) {
+    shinyFeedback::feedbackDanger(
+      "oi_pao2",
+      input$oi_pao2 <= 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$oi_desired == "S/F and OSI" & input$oi_pao2 >= 100) {
+    shinyFeedback::feedbackDanger(
+      "oi_pao2",
+      input$oi_desired == "S/F and OSI" & input$oi_pao2 >= 100,
+      "Please enter an SpO2 < 100%. Did you mean to enter a PaO2 (mmHg)?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$oi_pao2)) {
+    shinyFeedback::feedbackWarning(
+      "oi_pao2",
+      !is.integer(input$oi_pao2),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("oi_pao2")
+  }
+})
+
 ```
 
 ## Outputs
@@ -1057,21 +2144,21 @@ numericInput(
 
 ```{r oi_numeric_result}
 output$pf_oi_calculation <- renderText({
+  validate(
+    need(input$oi_pao2 > 0, "Please enter a numeric PaO2 (mmHg) or SpO2 (%) value greater than zero."),
+    need(input$oi_fio2 > 0, "Please enter a numeric FiO2 (%) value greater than zero."),
+    need(input$oi_map > 0, "Please enter a numeric mean airway pressure (cm H2O) value greater than zero.")
+  )
   pf_ratio <- input$oi_pao2 / input$oi_fio2 * 100
   oi_index <- input$oi_fio2 * input$oi_map / input$oi_pao2
 
   numeric_calculation <- case_when(
     input$oi_desired == "P/F and OI" ~ paste("The patient's P/F ratio is <b>", round(pf_ratio, 1), "</b>, and the patient's oxygenation index (OI) is <b>", round(oi_index, 1), "</b>.<br><br>PALICC defines pediatric ARDS as a P/F ratio <300 (mild), 100-199 (moderate), and <100 (severe) or an oxygnation index of ≥4 (mild), ≥8 (moderate), ≥16 (severe). The use of the oxygenation index is preferred.", sep = ""),
-    input$oi_desired == "S/F and OSI" & input$oi_pao2 > 100 ~ paste("<span style=\"color:red\">WARNING: You have selected an oxygen saturation of >100%. This is not posible. Did you mean to enter a PaO2?</span>"),
-    input$oi_desired == "S/F and OSI" & input$oi_pao2 == 100 ~ paste("<span style=\"color:red\">WARNING: You have selected an oxygen saturation of 100%. Is this actually your patient's oxygen saturation? If so, you should not attempt to calculate an an S/F ratio or OSI. It is impossible to infer a PaO2 from an SpO2 of 100% (e.g. both a PaO2 of 150 mmHg and 450 mmHg will result in an SpO2 of 100%). Did you mean to enter a PaO2?</span>"),
+    input$oi_desired == "S/F and OSI" & input$oi_pao2 > 100 ~ paste("<span style=\"color:#d9534f\">You have selected an oxygen saturation of >100%. This is not posible. Did you mean to enter a PaO2?</span>"),
+    input$oi_desired == "S/F and OSI" & input$oi_pao2 == 100 ~ paste("<span style=\"color:#d9534f\">You have selected an oxygen saturation of 100%. Is this actually your patient's oxygen saturation? If so, you should not attempt to calculate an an S/F ratio or OSI. It is impossible to infer a PaO2 from an SpO2 of 100% (e.g. both a PaO2 of 150 mmHg and 450 mmHg will result in an SpO2 of 100%). Did you mean to enter a PaO2?</span>"),
     input$oi_desired == "S/F and OSI" & input$oi_pao2 < 100 ~ paste("The patient's S/F ratio is <b>", round(pf_ratio, 1), "</b>, and the patient's oxygenation saturation index (OSI) is <b>", round(oi_index, 1), "</b>.<br><br>PALICC defines pediatric ARDS as an S/F ratio <264 or an oxygnation saturation index of ≥5 (mild), ≥7.5 (moderate), ≥12.3 (severe). The use of the oxygenation saturation index is preferred.", sep = "")
   )
-
-  integer_warning <- ifelse(is.integer(input$oi_fio2) & is.integer(input$oi_map) & is.integer(input$oi_peep) & is.integer(input$oi_pao2),
-    paste(""),
-    paste("<br><br><span style=\"color:red\">WARNING: you have entered non-integer values. Is this deliberate?")
-  )
-  return(paste(numeric_calculation, integer_warning))
+  return(paste(numeric_calculation))
 })
 
 htmlOutput("pf_oi_calculation")
@@ -1094,6 +2181,10 @@ Please note that an S/F ratio and OSI should **only** be calculated when $S_{p}O
 ```{r ardsnet_peep_graph}
 renderCachedPlot(
   {
+    validate(
+    need(input$oi_fio2 > 0, "Please enter a numeric FiO2 (%) value greater than zero."),
+    need(input$oi_peep > 0, "Please enter a numeric PEEP (cm H2O) value greater than zero.")
+  )
     patient_fio2 <- input$oi_fio2
     patient_peep <- input$oi_peep
 
@@ -1172,6 +2263,54 @@ numericInput(
   step = 1
 )
 
+observeEvent(input$ao_sat, {
+  if (!is.numeric(input$ao_sat)) {
+    shinyFeedback::feedbackDanger(
+      "ao_sat",
+      !is.numeric(input$ao_sat),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$ao_sat < 0) {
+    shinyFeedback::feedbackDanger(
+      "ao_sat",
+      input$ao_sat < 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$ao_sat > 100) {
+    shinyFeedback::feedbackDanger(
+      "ao_sat",
+      input$ao_sat > 100,
+      "Please enter a value ≤ 100%.",
+      icon = NULL
+    )
+  }
+  else if (input$ao_sat < 60) {
+    shinyFeedback::feedbackDanger(
+      "ao_sat",
+      input$ao_sat < 60,
+      "This is a potentially dangerous arterial oxgyen saturation (%) value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$ao_sat)) {
+    shinyFeedback::feedbackWarning(
+      "ao_sat",
+      !is.integer(input$ao_sat),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("ao_sat")
+  }
+})
+
+
 numericInput(
   inputId = "svc_sat",
   label = "Mixed Venous Oxygen Saturation (%):",
@@ -1180,6 +2319,54 @@ numericInput(
   max = 100,
   step = 1
 )
+
+observeEvent(input$svc_sat, {
+  if (!is.numeric(input$svc_sat)) {
+    shinyFeedback::feedbackDanger(
+      "svc_sat",
+      !is.numeric(input$svc_sat),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$svc_sat < 0) {
+    shinyFeedback::feedbackDanger(
+      "svc_sat",
+      input$svc_sat < 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$svc_sat > 80) {
+    shinyFeedback::feedbackDanger(
+      "svc_sat",
+      input$svc_sat > 80,
+      "This is a high mixed venous saturation (%) value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (input$svc_sat < 40) {
+    shinyFeedback::feedbackDanger(
+      "svc_sat",
+      input$svc_sat < 40,
+      "This is a potentially dangeously low mixed venous saturation (%) value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$svc_sat)) {
+    shinyFeedback::feedbackWarning(
+      "svc_sat",
+      !is.integer(input$svc_sat),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("svc_sat")
+  }
+})
+
 
 numericInput(
   inputId = "pv_sat",
@@ -1190,6 +2377,53 @@ numericInput(
   step = 1
 )
 
+observeEvent(input$pv_sat, {
+  if (!is.numeric(input$pv_sat)) {
+    shinyFeedback::feedbackDanger(
+      "pv_sat",
+      !is.numeric(input$pv_sat),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$pv_sat < 0) {
+    shinyFeedback::feedbackDanger(
+      "pv_sat",
+      input$pv_sat < 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$pv_sat > 100) {
+    shinyFeedback::feedbackDanger(
+      "pv_sat",
+      input$pv_sat > 100,
+      "Please enter a value ≤ 100%.",
+      icon = NULL
+    )
+  }
+  else if (input$pv_sat < 90) {
+    shinyFeedback::feedbackDanger(
+      "pv_sat",
+      input$pv_sat < 90,
+      "This is a surprisingly low pulmonary venous oxygen saturation (%) value. Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$pv_sat)) {
+    shinyFeedback::feedbackWarning(
+      "pv_sat",
+      !is.integer(input$pv_sat),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("pv_sat")
+  }
+})
+
 numericInput(
   inputId = "hgb",
   label = "Hemoglobin (mg/dL):",
@@ -1199,6 +2433,53 @@ numericInput(
   step = 0.1
 )
 
+observeEvent(input$hgb, {
+  if (!is.numeric(input$hgb)) {
+    shinyFeedback::feedbackDanger(
+      "hgb",
+      !is.numeric(input$hgb),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$hgb < 0) {
+    shinyFeedback::feedbackDanger(
+      "hgb",
+      input$hgb < 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$hgb > 20) {
+    shinyFeedback::feedbackDanger(
+      "hgb",
+      input$hgb > 20,
+      "This is a surprisingly high hemoglobin (mg/dL). Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (input$hgb < 7) {
+    shinyFeedback::feedbackDanger(
+      "hgb",
+      input$hgb < 7,
+      "This is a potentially dangerously low hemoglobin (mg/dL). Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$hgb)) {
+    shinyFeedback::feedbackWarning(
+      "hgb",
+      !is.integer(input$hgb),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("hgb")
+  }
+})
+
 numericInput(
   inputId = "qp_qs_pao2",
   label = "Partial Pressure of Oxygen (mmHg):",
@@ -1207,6 +2488,54 @@ numericInput(
   max = 1000,
   step = 1
 )
+
+observeEvent(input$qp_qs_pao2, {
+  if (!is.numeric(input$qp_qs_pao2)) {
+    shinyFeedback::feedbackDanger(
+      "qp_qs_pao2",
+      !is.numeric(input$qp_qs_pao2),
+      "A numeric value is required.",
+      icon = NULL
+    )
+  }
+  else if (input$qp_qs_pao2 < 0) {
+    shinyFeedback::feedbackDanger(
+      "qp_qs_pao2",
+      input$qp_qs_pao2 < 0,
+      "This calculator does not support negative values.",
+      icon = NULL
+    )
+  }
+  else if (input$qp_qs_pao2 > 200) {
+    shinyFeedback::feedbackDanger(
+      "qp_qs_pao2",
+      input$qp_qs_pao2 > 200,
+      "This is a surprisingly high PaO2 (mmHg). Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (input$qp_qs_pao2 < 30) {
+    shinyFeedback::feedbackDanger(
+      "qp_qs_pao2",
+      input$qp_qs_pao2 < 30,
+      "This is a potentially dangerously low PaO2 (mmHg). Are you sure?",
+      icon = NULL
+    )
+  }
+  else if (!is.integer(input$qp_qs_pao2)) {
+    shinyFeedback::feedbackWarning(
+      "qp_qs_pao2",
+      !is.integer(input$qp_qs_pao2),
+      "This isn't an integer. Are you sure?",
+      color = "#FF7F24",
+      icon = NULL
+    )
+  }
+  else {
+    shinyFeedback::hideFeedback("qp_qs_pao2")
+  }
+})
+
 ```
 
 ## Outputs
@@ -1215,39 +2544,19 @@ numericInput(
 
 ```{r qp_qs_numeric_result}
 output$qp_qs_result <- renderText({
+  validate(
+    need(input$ao_sat > 0 & input$ao_sat <= 100, "Please enter a numeric arterial oxygen saturation value between 0 and 100%."),
+    need(input$pv_sat > 0 & input$pv_sat <= 100, "Please enter a numeric pulmonary venous oxygen saturation value between 0 and 100%."),
+    need(input$svc_sat > 0 & input$svc_sat <= 100, "Please enter a numeric mixed venous oxygen saturation value between 0 and 100%."),
+    need(input$pv_sat > input$ao_sat, "Please enter a pulmonary venous oxygen saturation (%) greater than the arterial oxygen saturation (%)."),
+    need(input$ao_sat > input$svc_sat, "Please enter a arterial oxygen saturation (%) greater than the mixed venous oxygen saturation (%)."),
+    need(input$hgb > 0, "Please enter a numeric hemoglobin (mg/dL) value greater than zero.")
+  )
   qp_qs <- (input$ao_sat - input$svc_sat) / (input$pv_sat - input$ao_sat)
   carrying_capacity <- 1.34 * input$hgb * input$ao_sat / 100 + 0.003 * input$qp_qs_pao2
   numeric_result <- paste("The pulmonary to systemic blood flow ratio (Qp:Qs) is <b>", round(qp_qs, 2), " to 1</b>.<br>", "The patient's blood oxygen content is <b>", round(carrying_capacity, 2), " ml/dL</b>.", sep = "")
-  integer_warning <- ifelse(is.integer(input$ao_sat) & is.integer(input$svc_sat) & is.integer(input$pv_sat) & is.integer(input$qp_qs_pao2),
-    paste(""),
-    paste("<br><br><span style=\"color:red\">WARNING: you have entered non-integer values other than hemoglobin. Is this deliberate?")
-  )
-  pv_sat_warning <- case_when(
-    input$pv_sat > 100 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a pulmonary venous oxygen saturation greater than 100%. This is not physiologically possible."),
-    input$pv_sat < 90 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a pulmonary venous oxygen saturation less than 90%. Is this deliberate?"),
-    TRUE ~ paste("")
-  )
-  ao_sat_warning <- case_when(
-    input$ao_sat > 100 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered an aortic oxygen saturation greater than 100%. This is not physiologically possible."),
-    input$ao_sat < 60 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered an aortic oxygen saturation less than 60%. Is this deliberate?"),
-    TRUE ~ paste("")
-  )
-  svc_sat_warning <- case_when(
-    input$svc_sat > 80 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a mixed venous aortic oxygen saturation greater than 80%. Is this deliberate?"),
-    input$svc_sat < 40 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a mixed venous oxygen saturation less than 40%. Is this deliberate?"),
-    TRUE ~ paste("")
-  )
-  hgb_warning <- case_when(
-    input$hgb > 20 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a hemoglobin greater than 20 mg/dl. Is this deliberate?"),
-    input$hgb < 5 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered hemoglobin less than 5 mg/dl. Is this deliberate?"),
-    TRUE ~ paste("")
-  )
-  pao2_warning <- case_when(
-    input$qp_qs_pao2 > 300 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a PaO2 greater than 300 mmHg. Is this deliberate?"),
-    input$qp_qs_pao2 < 30 ~ paste("<br><br><span style=\"color:red\">WARNING: you have entered a PaO2 less than 30 mmHg. Is this deliberate?"),
-    TRUE ~ paste("")
-  )
-  return(paste(numeric_result, integer_warning, ao_sat_warning, svc_sat_warning, pv_sat_warning, hgb_warning, pao2_warning))
+  
+  return(paste(numeric_result))
 })
 
 htmlOutput("qp_qs_result")
@@ -1285,8 +2594,15 @@ rupv <- circleFun(c(3.5, 3.75), .25, npoints = 100)
 rlpv <- circleFun(c(3.5, 3.5), .25, npoints = 100)
 
 
-renderCachedPlot(
-  {
+renderCachedPlot({
+  validate(
+    need(input$ao_sat > 0 & input$ao_sat <= 100, "Please enter a numeric arterial oxygen saturation value between 0 and 100%."),
+    need(input$pv_sat > 0 & input$pv_sat <= 100, "Please enter a numeric pulmonary venous oxygen saturation value between 0 and 100%."),
+    need(input$svc_sat > 0 & input$svc_sat <= 100, "Please enter a numeric mixed venous oxygen saturation value between 0 and 100%."),
+    need(input$pv_sat > input$ao_sat, "Please enter a pulmonary venous oxygen saturation (%) greater than the arterial oxygen saturation (%)."),
+    need(input$ao_sat > input$svc_sat, "Please enter a arterial oxygen saturation (%) greater than the mixed venous oxygen saturation (%).")
+  )
+  
     svc_sat <- input$svc_sat
     ao_sat <- input$ao_sat
     pv_sat <- input$pv_sat
@@ -1383,6 +2699,11 @@ renderCachedPlot(
 
 renderCachedPlot(
   {
+    validate(
+    need(input$ao_sat > 0 & input$ao_sat <= 100, "Please enter a numeric arterial oxygen saturation value between 0 and 100%."),
+    need(input$qp_qs_pao2 > 0 & input$qp_qs_pao2 <= 150, "Please enter a numeric PaO2 (mmHg) value between 0 mmHg and 150 mmHg.")
+  )
+    
     patient_pao2 <- input$qp_qs_pao2
     patient_spo2 <- input$ao_sat
 
