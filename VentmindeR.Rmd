@@ -1622,7 +1622,7 @@ $\frac{-Volume}{Compliance}=Resistance*Flow$
 
 $\frac{-Volume}{Flow}=Resistance*Compliance=TimeConstant (\tau)$
 
-Because flow is negative (away from the patient) during exhalation, the negative signs cancel out, resulting in a positive value for $\tau$. Because most ventilators do not display flow as a negative number, VentmindeR is designed to take positive numbers for both flow and volume (exactly as you see it on the ventilator).
+Flow is negative (away from the patient) during exhalation, the negative signs cancel out, resulting in a positive value for $\tau$. However, because most ventilators do not display flow as a negative number, VentmindeR is designed to take positive numbers for both flow and volume (exactly as you see them on the ventilator).
 
 ## Graphical Output
 
