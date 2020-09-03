@@ -1511,7 +1511,7 @@ observeEvent(input$tc_itime, {
 
 ### Description {.white-box}
 
-Below is the patient's calculated _expiratory_ time constant and maximum safe respiratory rate to prevent air trapping. This calculator will use linear regression to average 3 readings, to minimize error caused by rounding on the ventilator. **However**, the regression line should have a near perfect correlation. If the $r^{2}$ value is not at least 0.8, please consider repeating your measurements.
+Below is the patient's calculated _expiratory_ time constant and maximum safe respiratory rate to prevent air trapping. This calculator will use linear regression to average 3 readings, to minimize error caused by rounding on the ventilator. **However**, the regression line should have a near perfect correlation. If the $r^{2}$ value is not at least 0.9, please consider repeating your measurements.
 
 ```{r tc_warning}
 output$tc_warning <- renderText({
@@ -1550,7 +1550,7 @@ output$tc_warning <- renderText({
   if (tc_regression_r_squared < 1 & tc_regression_r_squared > 0.8) {
     out <- paste("<br>The regression adjusted r^2 value is: ", round(tc_regression_r_squared, 3), ". This is likely acceptable.", sep = "")
   }
-  if (tc_regression_r_squared < 0.8) {
+  if (tc_regression_r_squared < 0.9) {
     out <- paste("<br><span style=\"color:#d9534f\">WARNING: the regression adjusted r^2 value is: ", round(tc_regression_r_squared, 3), ". This suggests a variable expiratory flow waveform. Possible explantions include secretions, active exhalation, or dynamic airway collapse.</span>", sep = "")
   }
   return(paste(out))
@@ -1622,7 +1622,7 @@ $\frac{-Volume}{Compliance}=Resistance*Flow$
 
 $\frac{-Volume}{Flow}=Resistance*Compliance=TimeConstant (\tau)$
 
-Flow is negative (away from the patient) during exhalation, the negative signs cancel out, resulting in a positive value for $\tau$. However, because most ventilators do not display flow as a negative number, VentmindeR is designed to take positive numbers for both flow and volume (exactly as you see them on the ventilator).
+Flow is negative (away from the patient) during exhalation. Thus, the negative signs cancel out, resulting in a positive value for $\tau$. However, because most ventilators do not display flow as a negative number, VentmindeR is designed to take positive numbers for both flow and volume (exactly as you see them on the ventilator).
 
 ## Graphical Output
 
