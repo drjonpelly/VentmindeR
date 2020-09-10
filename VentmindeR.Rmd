@@ -57,7 +57,7 @@ shinyFeedback::useShinyFeedback()
 
 **Welcome:**
 
-Welcome to **VentmindeR** (version 3.0.2, updated 3 September, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
+Welcome to **VentmindeR** (version 3.0.3, updated 10 September, 2020) a free, online, mobile-friendly, ventilator calculator. This tool was designed for use by clinicians experienced with ventilator management to facilitate rapid bedside calculations. It is **not** a substitute for clinical experience. A list of supporting papers can be found under the _References_ section.
 
 **About Each Calculator:**
 
@@ -2465,15 +2465,6 @@ observeEvent(input$hgb, {
       "hgb",
       input$hgb < 7,
       "This is a potentially dangerously low hemoglobin (mg/dL). Are you sure?",
-      icon = NULL
-    )
-  }
-  else if (!is.integer(input$hgb)) {
-    shinyFeedback::feedbackWarning(
-      "hgb",
-      !is.integer(input$hgb),
-      "This isn't an integer. Are you sure?",
-      color = "#FF7F24",
       icon = NULL
     )
   }
